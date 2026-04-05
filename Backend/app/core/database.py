@@ -7,8 +7,10 @@ from dotenv import load_dotenv
 # Esto busca el archivo .env y carga las variables
 load_dotenv()
 
-DATABASE_URL = "postgresql://postgres:gabo2004@localhost:5432/emergencia_db"
-
+#DATABASE_URL = "postgresql://postgres:gabo2004@localhost:5432/emergencia_db"
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    raise ValueError("La variable DATABASE_URL no está configurada en el .env")
 # El motor de conexión
 engine = create_engine(DATABASE_URL)
 

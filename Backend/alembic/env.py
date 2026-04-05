@@ -9,8 +9,11 @@ sys.path.insert(0, os.path.realpath(os.path.join(os.path.dirname(__file__), '..'
 
 from alembic import context
 
-from app.core.database import Base
+from app.core.database import DATABASE_URL,Base # Importa la URL de la base de datos antes base
 from app.modules.usuarios.models import Usuario, Cliente, Taller, PersonalTaller
+
+
+
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -64,12 +67,14 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
-    connectable = engine_from_config(
+    '''connectable = engine_from_config(
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
-
+    '''
+    from sqlalchemy import create_engine
+    connectable = create_engine(DATABASE_URL, poolclass=pool.NullPool)
     with connectable.connect() as connection:
         context.configure(
             connection=connection, target_metadata=target_metadata
