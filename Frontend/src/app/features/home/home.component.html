@@ -1,0 +1,68 @@
+<div class="min-h-screen bg-slate-50 flex flex-col md:flex-row">
+  
+  <header class="md:hidden bg-secondary text-white p-4 flex justify-between items-center shadow-lg sticky top-0 z-50">
+    <h1 class="text-lg font-black font-manrope">EMERGENCIA V.</h1>
+    <button (click)="logout()" class="p-2 hover:bg-white/10 rounded-lg flex items-center">
+      <span class="material-symbols-outlined">logout</span>
+    </button>
+  </header>
+
+  <aside class="w-64 bg-secondary text-white hidden md:flex flex-col p-6 sticky top-0 h-screen">
+    <h1 class="text-xl font-black font-manrope mb-10">EMERGENCIA V.</h1>
+    <nav class="space-y-4 flex-grow">
+      <a class="flex items-center gap-3 p-3 bg-white/10 rounded-xl cursor-pointer">
+        <span class="material-symbols-outlined">dashboard</span> Panel Principal
+      </a>
+      <a class="flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl cursor-pointer opacity-70">
+        <span class="material-symbols-outlined">car_crash</span> Emergencias
+      </a>
+      <a class="flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl cursor-pointer opacity-70">
+        <span class="material-symbols-outlined">settings</span> Configuración
+      </a>
+    </nav>
+    <button (click)="logout()" class="flex items-center gap-3 p-3 text-red-300 hover:bg-red-500/10 rounded-xl transition-all mt-auto">
+      <span class="material-symbols-outlined">logout</span> Salir
+    </button>
+  </aside>
+
+  <main class="flex-grow pb-20 md:pb-0"> <header class="bg-white p-6 shadow-sm hidden md:flex justify-between items-center">
+      <h2 class="text-xl font-bold text-slate-800">Bienvenido, {{ tallerNombre }}</h2>
+      <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">T</div>
+    </header>
+
+    <div class="p-4 md:p-8">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+        <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+          <p class="text-slate-500 text-sm">Servicios hoy</p>
+          <p class="text-3xl font-black text-primary">{{ serviciosPendientes }}</p>
+        </div>
+        <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+          <p class="text-slate-500 text-sm">Calificación</p>
+          <p class="text-3xl font-black text-yellow-500">4.8 ★</p>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-3xl p-10 shadow-sm border border-slate-100 min-h-[300px] flex flex-col items-center justify-center text-center">
+        <span class="material-symbols-outlined text-slate-200 text-7xl mb-4">construction</span>
+        <h3 class="text-lg font-bold text-slate-700">Sin emergencias</h3>
+        <p class="text-slate-400 text-sm">Todo está tranquilo por ahora.</p>
+      </div>
+    </div>
+  </main>
+
+  <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex justify-around p-3 z-50">
+    <a class="flex flex-col items-center text-primary">
+      <span class="material-symbols-outlined">dashboard</span>
+      <span class="text-[10px] font-bold">Panel</span>
+    </a>
+    <a class="flex flex-col items-center text-slate-400">
+      <span class="material-symbols-outlined">car_crash</span>
+      <span class="text-[10px]">Ayuda</span>
+    </a>
+    <a class="flex flex-col items-center text-slate-400">
+      <span class="material-symbols-outlined">settings</span>
+      <span class="text-[10px]">Ajustes</span>
+    </a>
+  </nav>
+
+</div>
