@@ -1,7 +1,7 @@
 # app/modules/vehiculos/models.py
 from sqlalchemy import Column, Integer, String, ForeignKey
 from sqlalchemy.orm import relationship
-from app.database import Base
+from Backend.app.core.database import Base
 
 class Vehiculo(Base):
     __tablename__ = "vehiculos"
