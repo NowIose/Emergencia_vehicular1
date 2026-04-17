@@ -132,21 +132,33 @@ class HomeScreen extends StatelessWidget {
               // Quick Actions Bento
               Row(
                 children: [
+                  // CARD DE MENSAJERÍA
                   Expanded(
-                    child: _buildBentoCard(
-                      icon: Icons.chat,
-                      iconColor: AppColors.secondary,
-                      iconBgColor: AppColors.secondary.withOpacity(0.2),
-                      title: 'Mensajería',
+                    child: GestureDetector(
+                      onTap: () => Navigator.pushNamed(context, '/messages'),
+                      child: _buildBentoCard(
+                        icon: Icons.chat,
+                        iconColor: AppColors.secondary,
+                        iconBgColor: AppColors.secondary.withOpacity(0.2),
+                        title: 'Mensajería',
+                      ),
                     ),
                   ),
                   const SizedBox(width: 16),
+
+                  // CARD DE TALLERES (ESTE ES EL QUE EDITAMOS)
                   Expanded(
-                    child: _buildBentoCard(
-                      icon: Icons.home_repair_service,
-                      iconColor: AppColors.primary,
-                      iconBgColor: AppColors.primary.withOpacity(0.1),
-                      title: 'Ver Talleres',
+                    child: GestureDetector(
+                      onTap: () => Navigator.pushNamed(
+                        context,
+                        '/workshops',
+                      ), // <--- NAVEGACIÓN AQUÍ
+                      child: _buildBentoCard(
+                        icon: Icons.home_repair_service,
+                        iconColor: AppColors.primary,
+                        iconBgColor: AppColors.primary.withOpacity(0.1),
+                        title: 'Ver Talleres',
+                      ),
                     ),
                   ),
                 ],
@@ -227,6 +239,13 @@ class HomeScreen extends StatelessWidget {
               type: BottomNavigationBarType.fixed,
               selectedItemColor: const Color(0xFFB91C1C), // red-700 approx
               unselectedItemColor: Colors.grey[500],
+              currentIndex: 0, // <--- 0 porque es la primera pantalla
+              onTap: (index) {
+                if (index == 1)
+                  Navigator.pushReplacementNamed(context, '/workshops');
+                if (index == 2)
+                  Navigator.pushReplacementNamed(context, '/messages');
+              },
               selectedLabelStyle: const TextStyle(
                 fontFamily: 'Inter',
                 fontSize: 11,
@@ -240,14 +259,21 @@ class HomeScreen extends StatelessWidget {
                 letterSpacing: 0.5,
               ),
               items: const [
-                BottomNavigationBarItem(icon: Icon(Icons.home), label: 'HOME'),
                 BottomNavigationBarItem(
                   icon: Icon(Icons.emergency_share),
-                  label: 'EMERGENCY',
+                  label: 'Emergency',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.car_repair),
+                  label: 'Workshops',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.chat_bubble),
+                  label: 'Messages',
                 ),
                 BottomNavigationBarItem(
                   icon: Icon(Icons.person),
-                  label: 'PROFILE',
+                  label: 'Profile',
                 ),
               ],
             ),

@@ -25,4 +25,8 @@ class AppColors {
   static const Color glassmorphismColor = Color(
     0xB3FFFFFF,
   ); // rgba(255, 255, 255, 0.7)
+
+  static const Color onPrimaryContainer = Color(0xFFD32F2F);
+  static const Color surfaceVariant = Color(0xFFE1E3E4);
+  static const Color secondaryContainer = Color(0xFFEDEEEF);
 }
