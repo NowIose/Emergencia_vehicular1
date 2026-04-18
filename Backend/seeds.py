@@ -1,0 +1,91 @@
+from app.core.database import SessionLocal
+from app.modules.usuarios.models import Taller, Cliente, PersonalTaller, UserRole, Usuario
+from sqlalchemy.orm import Session
+from app.core.security import get_password_hash # Importamos la función de hashing
+
+def seed_database():
+    db: Session = SessionLocal()
+    try:
+        # 1. Limpieza de correos de prueba
+        emails_test = [
+            "taller_central@example.com", 
+            "cliente_juan@example.com", 
+            "mecanico_pedro@example.com"
+        ]
+        
+        # Primero buscamos los IDs
+        usuarios_viejos = db.query(Usuario).filter(Usuario.email.in_(emails_test)).all()
+        ids_viejos = [u.id for u in usuarios_viejos]
+        
+        if ids_viejos:
+            # Borrado jerárquico manual
+            db.query(PersonalTaller).filter(PersonalTaller.id.in_(ids_viejos)).delete(synchronize_session=False)
+            db.query(Taller).filter(Taller.id.in_(ids_viejos)).delete(synchronize_session=False)
+            db.query(Cliente).filter(Cliente.id.in_(ids_viejos)).delete(synchronize_session=False)
+            db.query(Usuario).filter(Usuario.id.in_(ids_viejos)).delete(synchronize_session=False)
+            db.commit()
+            print("🧹 Datos de prueba antiguos limpiados.")
+
+        # Generamos una contraseña segura para todos (password123)
+        hashed_password = get_password_hash("password123")
+
+        # 2. Crear un Taller (Admin)
+        taller = Taller(
+            email="taller_central@example.com",
+            password_hash=hashed_password, 
+            rol=UserRole.ADMIN_TALLER,
+            nombre_taller="Taller Mecánico Central",
+            nit="987654321",
+            ciudad="Santa Cruz",
+            direccion="Calle Falsa 123",
+            foto_perfil="https://res.cloudinary.com/demo/image/upload/v1234567/taller_test.jpg",
+            latitud=-17.7833,
+            longitud=-63.1821
+        )
+        db.add(taller)
+        db.commit()
+        db.refresh(taller)
+        print(f"✅ Taller Seeded: {taller.nombre_taller} (ID: {taller.id})")
+
+        # 3. Crear un Cliente
+        cliente = Cliente(
+            email="cliente_juan@example.com",
+            password_hash=hashed_password,
+            rol=UserRole.CLIENTE,
+            nombre="Juan Pérez",
+            telefono="70012345",
+            ci="1234567 LP",
+            fecha_nacimiento="1990-05-15",
+            foto_perfil="https://res.cloudinary.com/demo/image/upload/v1234567/juan_cliente.jpg"
+        )
+        db.add(cliente)
+        db.commit()
+        db.refresh(cliente)
+        print(f"✅ Cliente Seeded: {cliente.nombre} (ID: {cliente.id})")
+
+        # 4. Crear un Personal para el Taller
+        personal = PersonalTaller(
+            email="mecanico_pedro@example.com",
+            password_hash=hashed_password,
+            rol=UserRole.PERSONAL_TALLER,
+            nombre_completo="Pedro El Mecánico",
+            cargo="Jefe de Mecánicos",
+            especialidad="Transmisiones Automáticas",
+            foto_perfil="https://res.cloudinary.com/demo/image/upload/v1234567/pedro_mecanico.jpg",
+            taller_id=taller.id
+        )
+        db.add(personal)
+        db.commit()
+        db.refresh(personal)
+        print(f"✅ Personal Seeded: {personal.nombre_completo} (ID: {personal.id})")
+
+        print("\n🚀 ¡Base de datos poblada con éxito para pruebas locales!")
+
+    except Exception as e:
+        db.rollback()
+        print(f"❌ Error durante el seeding: {e}")
+    finally:
+        db.close()
+
+if __name__ == "__main__":
+    seed_database()

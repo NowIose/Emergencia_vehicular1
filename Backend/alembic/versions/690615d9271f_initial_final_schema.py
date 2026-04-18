@@ -1,8 +1,8 @@
-"""creacion inicial
+"""initial_final_schema
 
-Revision ID: 344145ea3d79
+Revision ID: 690615d9271f
 Revises: 
-Create Date: 2026-04-02 21:39:56.931678
+Create Date: 2026-04-18 10:57:15.668255
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '344145ea3d79'
+revision: str = '690615d9271f'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -25,7 +25,7 @@ def upgrade() -> None:
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('email', sa.String(), nullable=False),
     sa.Column('password_hash', sa.String(), nullable=False),
-    sa.Column('rol', sa.Enum('ADMIN_TALLER', 'CLIENTE', name='userrole'), nullable=False),
+    sa.Column('rol', sa.Enum('ADMIN_TALLER', 'PERSONAL_TALLER', 'CLIENTE', name='userrole'), nullable=False),
     sa.Column('tipo_perfil', sa.String(length=50), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
@@ -35,12 +35,21 @@ def upgrade() -> None:
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('nombre', sa.String(length=100), nullable=True),
     sa.Column('telefono', sa.String(length=20), nullable=True),
+    sa.Column('ci', sa.String(length=20), nullable=True),
+    sa.Column('fecha_nacimiento', sa.String(length=50), nullable=True),
+    sa.Column('foto_perfil', sa.String(length=255), nullable=True),
     sa.ForeignKeyConstraint(['id'], ['usuarios.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('perfil_talleres',
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('nombre_comercial', sa.String(length=150), nullable=True),
+    sa.Column('nombre_taller', sa.String(length=150), nullable=False),
+    sa.Column('nit', sa.String(length=50), nullable=True),
+    sa.Column('ciudad', sa.String(length=100), nullable=True),
+    sa.Column('direccion', sa.String(length=255), nullable=True),
+    sa.Column('foto_perfil', sa.String(length=255), nullable=True),
+    sa.Column('latitud', sa.Float(), nullable=True),
+    sa.Column('longitud', sa.Float(), nullable=True),
     sa.ForeignKeyConstraint(['id'], ['usuarios.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
@@ -49,8 +58,10 @@ def upgrade() -> None:
     sa.Column('nombre_completo', sa.String(length=100), nullable=True),
     sa.Column('cargo', sa.String(length=50), nullable=True),
     sa.Column('especialidad', sa.String(length=100), nullable=True),
+    sa.Column('foto_perfil', sa.String(length=255), nullable=True),
     sa.Column('activo', sa.Boolean(), nullable=True),
     sa.Column('taller_id', sa.Integer(), nullable=True),
+    sa.ForeignKeyConstraint(['id'], ['usuarios.id'], ),
     sa.ForeignKeyConstraint(['taller_id'], ['perfil_talleres.id'], ),
     sa.PrimaryKeyConstraint('id')
     )

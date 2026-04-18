@@ -5,6 +5,7 @@ import enum
 
 class UserRole(enum.Enum):
     ADMIN_TALLER = "admin_taller"
+    PERSONAL_TALLER = "personal_taller"
     CLIENTE = "cliente"
 
 class Usuario(Base):
@@ -47,18 +48,21 @@ class Taller(Usuario):
     latitud = Column(Float, nullable=True)
     longitud = Column(Float, nullable=True)
     
-    personal = relationship("PersonalTaller", back_populates="taller")
+    personal = relationship("PersonalTaller", back_populates="taller", foreign_keys="PersonalTaller.taller_id")
     __mapper_args__ = {"polymorphic_identity": "taller"}
     
-class PersonalTaller(Base):
+class PersonalTaller(Usuario):
     """ Empleados del taller: mecánicos, electricistas, admins, etc. """
     __tablename__ = "personal_taller"
     
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, ForeignKey("usuarios.id"), primary_key=True)
     nombre_completo = Column(String(100))
     cargo = Column(String(50))  # Aquí guardas: "Electricista", "Mecánico", "Ventas"
     especialidad = Column(String(100), nullable=True) 
+    foto_perfil = Column(String(255), nullable=True) # URL de la foto (Cloudinary)
     activo = Column(Boolean, default=True)
     
     taller_id = Column(Integer, ForeignKey("perfil_talleres.id"))
-    taller = relationship("Taller", back_populates="personal")
+    taller = relationship("Taller", back_populates="personal", foreign_keys=[taller_id])
+    
+    __mapper_args__ = {"polymorphic_identity": "personal_taller"}
