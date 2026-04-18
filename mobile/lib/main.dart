@@ -8,7 +8,7 @@ import 'src/features/auth/presentation/pages/login_screen.dart';
 // Verifica que la ruta sea exactamente esta:
 import 'package:mobile/src/features/home/presentation/pages/home_screen.dart';
 import 'src/features/messages/presentation/pages/messages_screen.dart'; // Importa la pantalla
-import 'src/features/workshops/presentation/pages/workshops_screen.dart';
+import 'package:mobile/src/features/workshops/presentation/pages/workshops_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();

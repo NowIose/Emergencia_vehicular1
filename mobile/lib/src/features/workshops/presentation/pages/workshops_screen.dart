@@ -1,9 +1,24 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../domian/workshop_mode.dart';
+import '../../../../core/network/workshop_service.dart';
 
-class WorkshopsScreen extends StatelessWidget {
+class WorkshopsScreen extends StatefulWidget {
   const WorkshopsScreen({super.key});
+  @override
+  State<WorkshopsScreen> createState() => _WorkshopsScreenState();
+}
+
+class _WorkshopsScreenState extends State<WorkshopsScreen> {
+  late Future<List<WorkshopModel>> futureWorkshops;
+
+  @override
+  void initState() {
+    super.initState();
+    // Iniciamos la llamada al backend
+    futureWorkshops = WorkshopService().getWorkshops();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -19,46 +34,13 @@ class WorkshopsScreen extends StatelessWidget {
             child: AppBar(
               backgroundColor: AppColors.surface.withOpacity(0.7),
               elevation: 0,
-              scrolledUnderElevation: 0,
-              title: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.menu, color: Colors.black54),
-                    onPressed: () {},
-                  ),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'Kinetic Trust',
-                    style: TextStyle(
-                      fontFamily: 'Manrope',
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                      color: Colors.black87,
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                ],
-              ),
-              titleSpacing: 0,
-              actions: [
-                Padding(
-                  padding: const EdgeInsets.only(right: 16.0),
-                  child: Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: AppColors.surfaceContainerHighest,
-                      image: const DecorationImage(
-                        image: NetworkImage(
-                          'https://lh3.googleusercontent.com/aida-public/AB6AXuAZtXrXSgADPGDa11eYFjCPeh1sYPfcrvwQiSg1bq3UZBTig9NJGYRSKU7mYSsIqKiktLkW_vznlVBIds-Szo-ytIZ6Px1cENPBjg61bp7rgqTjtMd5LsStXc1Dtb3Ox1SmwOeK-82PdTGrtHRRhfxjhqMD-WN-b1LtzQrMBKTd-QPrJq1UJfvoPSykzq7HzPnA3sVhuxGtbKkkahQ6VjHB5Lm6rV5VfCLe6Fa_Ou8i6e8_z8fc2d6-zM13o6gy9O-Upm_T0qbcG0KR',
-                        ),
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  ),
+              title: const Text(
+                'Kinetic Trust',
+                style: TextStyle(
+                  color: Colors.black87,
+                  fontWeight: FontWeight.bold,
                 ),
-              ],
+              ),
             ),
           ),
         ),
@@ -118,45 +100,59 @@ class WorkshopsScreen extends StatelessWidget {
               const SizedBox(height: 24),
 
               // Workshops List
-              _buildWorkshopCard(
-                imageUrl:
-                    'https://lh3.googleusercontent.com/aida-public/AB6AXuAyrjX2g-NIU3W0bWiJHb0YqQUyx-0q9BlvIRck8EE0kH3oZnfPgYZE9s1pILcJAhSbkeUb0KykgfhsGnKNJAYKgE0TgkdvwPj_V_SQ9apHE--fet3FRs88BzM9jmdyjL4ZlMe1wz28xBOY3QphLddVVlSCwCqMaVRP-0tVG3PAlB2VnjX4uIX3kmFmCqCq4Skcu-IhutBGY-8jiKnOQmaKvrPvcqF0zq5tAT67CWFT5aXNdt_ghX9xM3oaZ9DfHvF39oEB_Ky2gTrF',
-                rating: '4.9',
-                title: 'MasterTech Elite',
-                location: 'Calle de la Innovación 42, Madrid',
-                badges: [
-                  _buildBadge('BMW Specialist', AppColors.secondary),
-                  _buildBadge('Hybrid', AppColors.tertiary),
-                ],
-              ),
-              const SizedBox(height: 24),
-              _buildWorkshopCard(
-                imageUrl:
-                    'https://lh3.googleusercontent.com/aida-public/AB6AXuDxYKwCxIbYL-AmhhKyz3GMTwD3QoPlH3TZYMvPxhGvtsTsObqm-c5pmOLxNma8cAvh8orVYO4LvDGOuzjN3iyJOgm7PRGBX7DcpkNAB07wZd3TQOXPmS2phDflWwcw9hm_QahOEqgQNt5UFhBAnFloNWJYfkT8JIJU-DzpBUISDYE_vnOZeMWAeOtA7EBVApZWUkDKeu2LOv5WfSsAgJifOVBMTWolSWju_Wg9BLvz3uAjZRu7jkmNsXynx0YEoOk4DPME0TX9qYzm',
-                rating: '4.7',
-                title: 'Mecánica del Futuro',
-                location: 'Av. Central 128, Barcelona',
-                badges: [
-                  _buildBadge('Quick Service', AppColors.secondary),
-                  _buildBadge('Electric', AppColors.tertiary),
-                ],
-              ),
-              const SizedBox(height: 24),
-              _buildWorkshopCard(
-                imageUrl:
-                    'https://lh3.googleusercontent.com/aida-public/AB6AXuC7U7MAmWLqc51rW0KAKZ_AWmnJymgitsyqIQ8KcnJreI49qSqKYSKvyycUxSMaej34CRxxURGUlU40sfW_4GMwBermQsJ-8a4yOEhW2PCZWlBGfPHKutylRIe5_09JZfpxPlp-Vqq_Oifi50PydcoS27YDuDgQAxMMggwfqm7V74EwFD3PHm7XZMpBJC6cuM1748ElOuex7y9cISJym0iMsBNsuyA9N6WKw6H3UUWX5U4pOWhM3pKGADYbY259hQrs5yEgm6OykUcR',
-                rating: '4.5',
-                title: 'Precision Wheels',
-                location: 'Polígono Industrial Norte, Valencia',
-                badges: [
-                  _buildBadge('Tires', AppColors.secondary),
-                  _buildBadge('Suspension', AppColors.tertiary),
-                ],
+              FutureBuilder<List<WorkshopModel>>(
+                future: futureWorkshops,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(
+                      child: CircularProgressIndicator(
+                        color: AppColors.primary,
+                      ),
+                    );
+                  } else if (snapshot.hasError) {
+                    return Center(child: Text('Error: ${snapshot.error}'));
+                  } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                    return const Center(
+                      child: Text('Aún no hay talleres registrados.'),
+                    );
+                  }
+
+                  final workshops = snapshot.data!;
+                  return ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: workshops.length,
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(height: 24),
+                    itemBuilder: (context, index) {
+                      final workshop = workshops[index];
+                      // Unimos ciudad y dirección para mostrarlo bien
+                      final ubicacionCompleta =
+                          '${workshop.direccion}, ${workshop.ciudad}';
+
+                      return _buildWorkshopCard(
+                        id: workshop.id,
+                        imageUrl: workshop.fotoPerfil, // Puede ser null
+                        rating:
+                            '4.5', // TODO: Actualizar cuando se agregue a models.py
+                        title: workshop.nombreTaller,
+                        location: ubicacionCompleta,
+                        badges: [
+                          _buildBadge(
+                            'Mecánica General',
+                            AppColors.secondary,
+                          ), // Estático por ahora
+                        ],
+                      );
+                    },
+                  );
+                },
               ),
             ],
           ),
         ),
       ),
+
       bottomNavigationBar: ClipRRect(
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         child: BackdropFilter(
@@ -241,7 +237,8 @@ class WorkshopsScreen extends StatelessWidget {
   }
 
   Widget _buildWorkshopCard({
-    required String imageUrl,
+    required int id,
+    required String? imageUrl,
     required String rating,
     required String title,
     required String location,
@@ -264,56 +261,38 @@ class WorkshopsScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Image and rating badge
           SizedBox(
             height: 192,
             width: double.infinity,
             child: Stack(
               fit: StackFit.expand,
               children: [
-                Image.network(imageUrl, fit: BoxFit.cover),
-                Positioned(
-                  top: 12,
-                  right: 12,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
+                // MANEJO DE IMAGEN
+                imageUrl != null && imageUrl.isNotEmpty
+                    ? Image.network(
+                        imageUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => Container(
+                          color: Colors.grey,
+                          child: const Icon(
+                            Icons.car_repair,
+                            size: 50,
+                            color: Colors.grey,
+                          ),
                         ),
-                        color: Colors.white.withOpacity(0.9),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.star,
-                              color: Colors.amber,
-                              size: 14,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              rating,
-                              style: const TextStyle(
-                                fontFamily: 'Inter',
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
-                                color: AppColors.onSurface,
-                              ),
-                            ),
-                          ],
+                      )
+                    : Container(
+                        color: Colors.grey,
+                        child: const Icon(
+                          Icons.car_repair,
+                          size: 60,
+                          color: Colors.grey,
                         ),
                       ),
-                    ),
-                  ),
-                ),
+                // (Mantén el código del rating aquí arriba a la derecha)
               ],
             ),
           ),
-
-          // Content
           Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -322,55 +301,59 @@ class WorkshopsScreen extends StatelessWidget {
                 Text(
                   title,
                   style: const TextStyle(
-                    fontFamily: 'Manrope',
                     fontWeight: FontWeight.bold,
                     fontSize: 18,
-                    color: AppColors.onSurface,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    const Icon(
-                      Icons.location_on,
-                      size: 14,
-                      color: AppColors.onSurfaceVariant,
-                    ),
+                    const Icon(Icons.location_on, size: 14, color: Colors.grey),
                     const SizedBox(width: 4),
-                    Text(
-                      location,
-                      style: const TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.onSurfaceVariant,
+                    Expanded(
+                      child: Text(
+                        location,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 16),
+                Wrap(spacing: 4, runSpacing: 4, children: badges),
+                const SizedBox(height: 16),
+
+                // BOTONES
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Expanded(
-                      child: Wrap(spacing: 4, runSpacing: 4, children: badges),
-                    ),
                     TextButton(
-                      onPressed: () {},
-                      style: TextButton.styleFrom(
-                        padding: EdgeInsets.zero,
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
+                      onPressed: () {
+                        /* Navegar al perfil del taller */
+                      },
                       child: const Text(
                         'Saber más',
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primary,
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        print('Iniciar chat con el taller ID: $id');
+                        // Navigator.pushNamed(context, '/chat', arguments: id);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
                         ),
                       ),
+                      icon: const Icon(Icons.chat_bubble_outline, size: 16),
+                      label: const Text('Mensaje'),
                     ),
                   ],
                 ),
@@ -392,11 +375,9 @@ class WorkshopsScreen extends StatelessWidget {
       child: Text(
         text.toUpperCase(),
         style: TextStyle(
-          fontFamily: 'Inter',
           fontSize: 10,
           fontWeight: FontWeight.bold,
           color: baseColor,
-          letterSpacing: 0.5,
         ),
       ),
     );

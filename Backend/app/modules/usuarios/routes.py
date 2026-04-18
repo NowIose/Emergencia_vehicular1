@@ -24,6 +24,8 @@ from .schemas import LoginRequest, TokenResponse, UsuarioResponse
 from .services import authenticate_user
 from fastapi.security import OAuth2PasswordBearer
 
+from typing import List
+from .schemas import TallerResponse
 
 #es un descriptor que le dice a FastAPI donde pedir el token en este caso el endpoint /login
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="usuarios/login")
@@ -149,6 +151,14 @@ def register_cliente(obj_in: ClienteCreate, db: Session = Depends(get_db)):
     db.refresh(nuevo_cliente)
     return {"message": "Cliente registrado", "id": nuevo_cliente.id}
 
+
+@router.get("/lista-talleres", response_model=List[TallerResponse])
+def get_all_talleres(db: Session = Depends(get_db)):
+    """
+    Devuelve la lista de todos los talleres registrados.
+    """
+    talleres = db.query(Taller).all()
+    return talleres
 '''┌─ IMPORTS (todo arriba)
 ├─ router = APIRouter(...)
 ├─ oauth2_scheme = OAuth2PasswordBearer(...)
