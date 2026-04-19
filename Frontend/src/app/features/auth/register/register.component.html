@@ -195,22 +195,44 @@
           </div>
         </div>
 
+        <!-- Foto del Taller (Opcional)  cambiar para uso de cloudinary-->
         <div class="space-y-1">
-          <label class="text-xs font-bold text-slate-500 ml-1 uppercase"
-            >Foto del Taller (Opcional)</label
-          >
+          <label class="text-xs font-bold text-slate-500 ml-1 uppercase">Foto del Taller (Opcional)</label>
           <div class="flex items-center justify-center w-full">
-            <label
-              class="flex flex-col items-center justify-center w-full h-32 border-2 border-slate-200 border-dashed rounded-2xl cursor-pointer bg-slate-50 hover:bg-slate-100 transition-colors"
-            >
+            <label class="flex flex-col items-center justify-center w-full h-32 border-2 border-slate-200 border-dashed rounded-2xl cursor-pointer bg-slate-50 hover:bg-slate-100 transition-colors">
               <div class="flex flex-col items-center justify-center pt-5 pb-6">
                 <span class="material-symbols-outlined text-slate-400 mb-2">add_a_photo</span>
                 <p class="text-xs text-slate-500">Haz clic para subir o arrastra la imagen</p>
               </div>
               <input type="file" class="hidden" accept="image/*" />
+              
+              <input type="hidden" formControlName="foto_perfil">
             </label>
           </div>
         </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+          <!-- Campos de latitud y longitud, solo lectura  por el momento-->
+        <div class="space-y-1">
+          <label class="text-xs font-bold text-slate-500 ml-1 uppercase">Latitud (Auto)</label>
+          <div class="relative">
+            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">map</span>
+            <input formControlName="latitud" type="number" readonly
+                  class="w-full pl-10 pr-4 py-3 bg-slate-100 border-none rounded-xl text-slate-500 cursor-not-allowed" />
+          </div>
+        </div>
+
+
+        <div class="space-y-1">
+          <label class="text-xs font-bold text-slate-500 ml-1 uppercase">Longitud (Auto)</label>
+          <div class="relative">
+            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">explore</span>
+            <input formControlName="longitud" type="number" readonly
+                  class="w-full pl-10 pr-4 py-3 bg-slate-100 border-none rounded-xl text-slate-500 cursor-not-allowed" />
+          </div>
+        </div>
+      </div>
+
 
         <div class="space-y-1">
           <label class="text-xs font-bold text-slate-500 ml-1 uppercase"

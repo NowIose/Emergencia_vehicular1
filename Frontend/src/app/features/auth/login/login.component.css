@@ -1,0 +1,29 @@
+/* login.component.css */
+
+/* Animación de entrada para el formulario */
+form {
+    animation: fadeIn 0.6s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Estilo para los iconos de Material Symbols */
+.material-symbols-outlined {
+    font-variation-settings:
+    'FILL' 0,
+    'wght' 400,
+    'GRAD' 0,
+    'opsz' 24;
+}
+
+/* Personalización de colores específicos de Material 3 si Tailwind no los tiene */
+.bg-surface {
+    background-color: #fdfbff;
+}
+
+.text-error {
+    color: #ba1a1a;
+}

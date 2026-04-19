@@ -13,6 +13,10 @@ export class AuthService {
   registrarTaller(datos: any) {
     return this.http.post(`${this.apiUrl}/register-taller`, datos);
   }
+ 
+  registrarCliente(datos: any) {
+    return this.http.post(`${this.apiUrl}/register-cliente`, datos);
+  }
 
   // NUEVA FUNCIÓN PARA TU LOGIN
   login(credentials: { email: string; password: string }) {
@@ -20,7 +24,11 @@ export class AuthService {
       tap((response) => {
         // Guardamos el token en el navegador para que no se borre al refrescar
         localStorage.setItem('access_token', response.access_token);
-        this.currentUser.set(response.user); // Guardamos info del usuario
+        if (response.user) {
+          this.currentUser.set(response.user);
+         // Opcional: persistir datos básicos del usuario (no el token) para no perderlos al recargar F5
+          localStorage.setItem('user_data', JSON.stringify(response.user));
+        }
       })
     );
   }

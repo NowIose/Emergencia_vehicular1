@@ -24,26 +24,40 @@ export class RegisterComponent {
     nit: ['', Validators.required],
     ciudad: ['', Validators.required],
     direccion: ['', Validators.required],
+    // AGREGAMOS ESTOS PARA EVITAR ERRORES DE VALIDACIÓN EN EL BACK
+    latitud: [0], 
+    longitud: [0],
+    foto_perfil: [''] 
   });
 
   onSubmit() {
-    console.log('Formulario clickeado');
-    if (this.registerForm.invalid) {
-      console.log('Formulario inválido:', this.registerForm.errors);
-      // Esto te dirá qué campo falta
-      return;
-    }
+    if (this.registerForm.valid) {
+      // 1. Preparamos los datos (incluyendo los campos ocultos que el backend pide)
+      const datosRegistro = {
+        ...this.registerForm.value,
+        latitud: 0,        // Valores por defecto para que no falle el backend
+        longitud: 0,
+        foto_perfil: 'default.png'
+      };
 
-    console.log('Enviando datos...', this.registerForm.value);
-    this.authService.registrarTaller(this.registerForm.value).subscribe({
-      next: (res) => {
-        alert('¡Registro exitoso!');
-        this.router.navigate(['/login']);
-      },
-      error: (err) => {
-        console.error('Error completo del servidor:', err);
-        alert('Error: ' + err.error?.detail || 'Error de conexión');
-      },
-    });
+      console.log('Enviando datos al servidor...', datosRegistro);
+
+      // 2. Llamamos al servicio de registro
+      this.authService.registrarTaller(datosRegistro).subscribe({
+        next: (res) => {
+          // 3. Si todo sale bien, notificamos y redirigimos
+          alert('¡Registro exitoso! Ahora ingresa con tus credenciales.');
+          this.router.navigate(['/login']); // <--- Redirección manual al login
+        },
+        error: (err) => {
+          console.error('Error en el registro:', err);
+          // Mostramos el error que viene de FastAPI (ej: "El email ya existe")
+          const mensajeError = err.error?.detail || 'No se pudo completar el registro';
+          alert('Error: ' + mensajeError);
+        }
+      });
+    } else {
+      alert('Por favor, completa todos los campos obligatorios.');
+    }
   }
 }

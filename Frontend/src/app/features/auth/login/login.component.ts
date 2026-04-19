@@ -9,6 +9,7 @@ import { AuthService } from '../../../core/services/auth/auth.service';
   standalone: true,
   imports: [CommonModule, RouterLink, ReactiveFormsModule], // Importamos ReactiveFormsModule
   templateUrl: './login.component.html',
+  styleUrl: './login.component.css'
 })
 export class LoginComponent {
   private fb = inject(FormBuilder);
@@ -23,20 +24,22 @@ export class LoginComponent {
 
   onSubmit() {
     if (this.loginForm.valid) {
-      const credentials = this.loginForm.value as { email: string; password: string };
+      // Usamos 'any' o una interfaz para no pelear con tipos estrictos aquí
+      const credentials = this.loginForm.value as any; 
       
       this.authService.login(credentials).subscribe({
         next: (response) => {
-          console.log('Login exitoso', response);
-          this.router.navigate(['/home']); // ¡Aquí es donde ocurre la redirección!
+          // response ahora trae { access_token, token_type, user }
+          console.log('Datos del usuario logueado:', response.user);
+          this.router.navigate(['/home']);
         },
         error: (err) => {
           console.error('Error en login', err);
-          alert('Credenciales incorrectas o error en el servidor');
+          // Mostramos el mensaje exacto que viene del backend
+          const msg = err.error?.detail || 'Credenciales incorrectas';
+          alert(msg);
         }
       });
-    } else {
-      alert('Por favor, rellena los campos correctamente');
     }
-  }
+}
 }
