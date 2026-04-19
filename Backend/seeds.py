@@ -18,13 +18,19 @@ def seed_database():
         ids_viejos = [u.id for u in usuarios_viejos]
         
         if ids_viejos:
-            # Borrado jerárquico manual
-            db.query(PersonalTaller).filter(PersonalTaller.id.in_(ids_viejos)).delete(synchronize_session=False)
+            # --- ORDEN DE BORRADO CORRECTO ---
+            # 1. Borramos el personal (depende de talleres)
+            db.query(PersonalTaller).filter(PersonalTaller.taller_id.in_(ids_viejos)).delete(synchronize_session=False)
+            
+            # 2. Borramos los talleres y clientes
             db.query(Taller).filter(Taller.id.in_(ids_viejos)).delete(synchronize_session=False)
             db.query(Cliente).filter(Cliente.id.in_(ids_viejos)).delete(synchronize_session=False)
+            
+            # 3. Finalmente borramos el usuario base (id)
             db.query(Usuario).filter(Usuario.id.in_(ids_viejos)).delete(synchronize_session=False)
+            
             db.commit()
-            print("🧹 Datos de prueba antiguos limpiados.")
+            print("🧹 Datos de prueba antiguos limpiados correctamente.")
 
         # Generamos una contraseña segura para todos (password123)
         hashed_password = get_password_hash("password123")
@@ -35,6 +41,7 @@ def seed_database():
             password_hash=hashed_password, 
             rol=UserRole.ADMIN_TALLER,
             nombre_taller="Taller Mecánico Central",
+            telefono="71234567",
             nit="987654321",
             ciudad="Santa Cruz",
             direccion="Calle Falsa 123",

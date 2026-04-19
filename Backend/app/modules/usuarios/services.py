@@ -2,6 +2,7 @@
 from sqlalchemy.orm import Session
 from .models import Usuario
 from app.core.security import verify_password
+from .schemas import TallerCreate, PersonalTallerCreate, PersonalTallerUpdate
 '''def registrar_actividad(db: Session, usuario_id: int, accion: str):
     """Función global para alimentar la bitácora de actividad"""
     nueva_actividad = Bitacora(usuario_id=usuario_id, accion=accion)
@@ -12,6 +13,35 @@ def crear_usuario_taller(db: Session, datos_taller: dict):
     # Lógica para crear el usuario y su perfil de taller
     # Luego llamar a registrar_actividad...
     pass
+from .models import Taller, UserRole
+
+def create_taller_service(db: Session, obj_in: TallerCreate):
+    # 1. Encriptar contraseña
+    hashed_password = get_password_hash(obj_in.password)
+    
+    # 2. Crear instancia del modelo Taller (que hereda de Usuario)
+    nuevo_taller = Taller(
+        email=obj_in.email,
+        password_hash=hashed_password,
+        telefono=obj_in.telefono,
+        rol=UserRole.ADMIN_TALLER,
+        tipo_perfil="taller",
+        nombre_taller=obj_in.nombre_taller,
+        nit=obj_in.nit,
+        ciudad=obj_in.ciudad,
+        direccion=obj_in.direccion,
+        latitud=0.0, # Valor por defecto mientras implementan el GPS
+        longitud=0.0
+    )
+    
+    try:
+        db.add(nuevo_taller)
+        db.commit()
+        db.refresh(nuevo_taller)
+        return nuevo_taller
+    except Exception as e:
+        db.rollback()
+        raise e
 
 from .models import Usuario, PersonalTaller, UserRole
 from app.core.security import verify_password, get_password_hash

@@ -39,6 +39,7 @@ class Taller(Usuario):
     
     # Campos que coinciden con el formulario y tu diagrama
     nombre_taller = Column(String(150), nullable=False)
+    telefono = Column(String(20),nullable=True) # Agregado
     nit = Column(String(50), nullable=True) # Agregado
     ciudad = Column(String(100), nullable=True) # Agregado
     direccion = Column(String(255), nullable=True) # Agregado

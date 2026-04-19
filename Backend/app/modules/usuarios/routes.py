@@ -21,7 +21,7 @@ from app.core.security import create_access_token, verify_password
 
 from .models import Usuario
 from .schemas import LoginRequest, TokenResponse, UsuarioResponse, PersonalTallerCreate, PersonalTallerUpdate, PersonalTallerResponse
-from .services import authenticate_user, create_personal_taller, get_personal_by_taller, update_personal_taller, delete_personal_taller, get_personal_by_id
+from .services import authenticate_user, create_personal_taller, get_personal_by_taller, update_personal_taller, delete_personal_taller, get_personal_by_id, create_taller_service
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from typing import List
 
@@ -29,7 +29,7 @@ from typing import List
 #es un descriptor que le dice a FastAPI donde pedir el token en este caso el endpoint /login
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="usuarios/login")
 
-@router.post("/register-taller", status_code=status.HTTP_201_CREATED)
+'''@router.post("/register-taller", status_code=status.HTTP_201_CREATED)
 def register_taller(obj_in: TallerCreate, db: Session = Depends(get_db)):
     # ... validación de existencia ...
 
@@ -56,8 +56,22 @@ def register_taller(obj_in: TallerCreate, db: Session = Depends(get_db)):
     except Exception as e:
         db.rollback() # Siempre haz rollback si falla el commit
         print(f"ERROR REAL: {e}") # Mira esto en la terminal de VS Code
+        raise HTTPException(status_code=500, detail=str(e))'''
+@router.post("/register-taller", status_code=status.HTTP_201_CREATED)
+def register_taller(obj_in: TallerCreate, db: Session = Depends(get_db)):
+    # 1. Verificar si el email ya existe
+    user_exists = db.query(Usuario).filter(Usuario.email == obj_in.email).first()
+    if user_exists:
+        raise HTTPException(status_code=400, detail="El email ya está registrado")
+
+    try:
+        # 2. Llamar al servicio que acabamos de crear
+        nuevo_taller = create_taller_service(db, obj_in)
+        return {"message": "Taller registrado exitosamente", "id": nuevo_taller.id}
+    except Exception as e:
+        print(f"ERROR EN REGISTRO: {e}")
+        #raise HTTPException(status_code=500, detail="Error interno al registrar el taller")
         raise HTTPException(status_code=500, detail=str(e))
-    
 '''def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     """
     Valida el token JWT y devuelve el usuario.
