@@ -242,6 +242,9 @@ def crear_personal(
     if current_user.rol != UserRole.ADMIN_TALLER:
         raise HTTPException(status_code=403, detail="Solo los administradores de taller pueden crear personal")
     
+    """Verificar que el email no exista en la base de datos general de usuarios."""
+    if db.query(Usuario).filter(Usuario.email == obj_in.email).first():
+        raise HTTPException(status_code=400, detail="El email ya existe")
     # El taller_id del administrador es su propio ID (ya que el perfil Taller hereda de Usuario)
     return create_personal_taller(db, obj_in, taller_id=current_user.id)
 
