@@ -83,7 +83,7 @@
                 <span class="material-symbols-outlined text-primary">engineering</span>
                 Mi Personal
               </h3>
-              <button class="bg-primary text-white px-5 py-2.5 rounded-2xl text-sm font-bold flex items-center gap-2 hover:scale-105 active:scale-95 transition-all shadow-lg shadow-primary/25">
+              <button class="bg-primary text-white px-5 py-2.5 rounded-2xl text-sm font-bold flex items-center gap-2 hover:scale-105 active:scale-95 transition-all shadow-lg shadow-primary/25" (click)="abrirModal()">
                 <span class="material-symbols-outlined text-sm">person_add</span> Nuevo Miembro
               </button>
             </div>
@@ -153,6 +153,85 @@
           </div>
         </div>
 
+      </div>
+    </div>
+    <div *ngIf="mostrarModal()" class="fixed inset-0 z-[100] flex items-center justify-center p-4">
+      <div class="absolute inset-0 bg-secondary/60 backdrop-blur-sm transition-opacity" (click)="cerrarModal()"></div>
+
+      <div class="bg-white rounded-[2.5rem] w-full max-w-md p-8 shadow-2xl relative z-10 animate-in fade-in zoom-in duration-300">
+        <div class="flex justify-between items-center mb-6">
+          <div>
+            <h3 class="text-xl font-black text-slate-800 italic">Registrar Personal</h3>
+            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Acceso para la App Móvil</p>
+          </div>
+          <button (click)="cerrarModal()" class="text-slate-400 hover:text-red-500 transition-colors">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <form [formGroup]="personalForm" (ngSubmit)="guardarPersonal()" class="space-y-4">
+          <div class="flex flex-col items-center mb-6">
+    <div class="relative">
+      <div class="w-24 h-24 rounded-[2rem] bg-slate-100 border-4 border-white shadow-xl overflow-hidden flex items-center justify-center">
+        <img *ngIf="fotoPreview()" [src]="fotoPreview()" class="w-full h-full object-cover" [class.opacity-50]="subiendoFoto()">
+        
+        <span *ngIf="!fotoPreview()" class="material-symbols-outlined text-4xl text-slate-300">person</span>
+
+        <div *ngIf="subiendoFoto()" class="absolute inset-0 flex items-center justify-center bg-white/40">
+          <div class="w-6 h-6 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      </div>
+      
+      <label class="absolute -bottom-2 -right-2 bg-primary text-white w-10 h-10 rounded-xl flex items-center justify-center shadow-lg cursor-pointer hover:scale-110 active:scale-95 transition-all">
+        <span class="material-symbols-outlined text-xl">add_a_photo</span>
+        <input type="file" (change)="onFileSelected($event)" class="hidden" accept="image/*" [disabled]="subiendoFoto()">
+      </label>
+    </div>
+    <p class="text-[10px] font-black text-slate-400 uppercase mt-4 tracking-widest text-center">
+      {{ subiendoFoto() ? 'Subiendo a Cloudinary...' : 'Foto del Miembro' }}
+    </p>
+  </div>
+          <div>
+            <label class="text-[10px] font-black text-slate-400 uppercase ml-3 mb-1 block">Nombre Completo</label>
+            <input type="text" formControlName="nombre_completo" placeholder="Ej. Carlos Arana"
+                   class="w-full bg-slate-50 border-none rounded-2xl p-4 text-sm focus:ring-2 focus:ring-primary/20 outline-none">
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="text-[10px] font-black text-slate-400 uppercase ml-3 mb-1 block">Email</label>
+              <input type="email" formControlName="email" placeholder="correo@taller.com"
+                     class="w-full bg-slate-50 border-none rounded-2xl p-4 text-sm focus:ring-2 focus:ring-primary/20 outline-none">
+            </div>
+            <div>
+              <label class="text-[10px] font-black text-slate-400 uppercase ml-3 mb-1 block">Password</label>
+              <input type="password" formControlName="password" placeholder="******"
+                     class="w-full bg-slate-50 border-none rounded-2xl p-4 text-sm focus:ring-2 focus:ring-primary/20 outline-none">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="text-[10px] font-black text-slate-400 uppercase ml-3 mb-1 block">Cargo</label>
+              <select formControlName="cargo" class="w-full bg-slate-50 border-none rounded-2xl p-4 text-sm focus:ring-2 focus:ring-primary/20 outline-none appearance-none">
+                <option value="Mecánico">Mecánico</option>
+                <option value="Electricista">Electricista</option>
+                <option value="Llantero">Llantero</option>
+                <option value="Ayudante">Ayudante</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-[10px] font-black text-slate-400 uppercase ml-3 mb-1 block">Especialidad</label>
+              <input type="text" formControlName="especialidad" placeholder="Ej. Motores"
+                     class="w-full bg-slate-50 border-none rounded-2xl p-4 text-sm focus:ring-2 focus:ring-primary/20 outline-none">
+            </div>
+          </div>
+
+          <button type="submit" [disabled]="personalForm.invalid"
+                  class="w-full bg-primary text-white py-4 rounded-2xl font-black uppercase tracking-widest mt-4 shadow-lg shadow-primary/30 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50">
+            Confirmar Registro
+          </button>
+        </form>
       </div>
     </div>
   </main>
