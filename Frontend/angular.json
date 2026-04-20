@@ -28,7 +28,13 @@
             "styles": ["src/styles.css"]
           },
           "configurations": {
-            "production": {
+            "production": {   
+              "fileReplacements": [
+                  {
+                    "replace": "src/environments/environment.ts",
+                    "with": "src/environments/environment.prod.ts"
+                  }
+                ],                         
               "budgets": [
                 {
                   "type": "initial",

@@ -4,8 +4,8 @@ from typing import Optional
 class TallerCreate(BaseModel):
     # Datos de la tabla Usuario
     email: EmailStr
-    password: Optional[str] = None
-    telefono: str
+    password: str  # Para registro, la contraseña suele ser obligatoria
+    telefono: Optional[str] = None
     
     # Datos de la tabla Taller
     nombre_taller: str
@@ -13,8 +13,16 @@ class TallerCreate(BaseModel):
     ciudad: str
     direccion: str
     
+    # --- ATRIBUTOS QUE FALTABAN ---
+    # Los ponemos como Optional para que el registro no falle si el 
+    # frontend aún no implementa GPS o Cloudinary
+    latitud: Optional[float] = 0.0
+    longitud: Optional[float] = 0.0
+    foto_perfil: Optional[str] 
+
     class Config:
         from_attributes = True
+
 
 class ClienteCreate(BaseModel):
     email: EmailStr
@@ -45,11 +53,20 @@ class LoginRequest(BaseModel):
     email: EmailStr
     password: str
 
+
+class UsuarioLoginInfo(BaseModel):
+    id: int
+    email: EmailStr
+    rol: str
+
 #Backend responde con TokenResponse(el token Jwt)
 
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
+    user: UsuarioLoginInfo
+
+
 
 #Backend responde con UsuarioResponse(datos del usuario)
 class UsuarioResponse(BaseModel):
@@ -61,13 +78,34 @@ class UsuarioResponse(BaseModel):
     class Config:
         from_attributes = True
 
-class TallerResponse(BaseModel):
+# --- Esquemas para PersonalTaller ---
+
+class PersonalTallerCreate(BaseModel):
+    email: EmailStr
+    password: str
+    nombre_completo: str
+    cargo: str  # E.g., "Mecánico", "Electricista"
+    especialidad: Optional[str] = None
+    foto_perfil: Optional[str] = None
+
+class PersonalTallerUpdate(BaseModel):
+    nombre_completo: Optional[str] = None
+    cargo: Optional[str] = None
+    especialidad: Optional[str] = None
+    foto_perfil: Optional[str] = None
+    password: Optional[str] = None
+    activo: Optional[bool] = None
+
+class PersonalTallerResponse(BaseModel):
     id: int
     email: EmailStr
-    nombre_taller: str
-    ciudad: str
-    direccion: str
+    nombre_completo: str
+    cargo: str
+    especialidad: Optional[str] = None
     foto_perfil: Optional[str] = None
+    activo: bool
+    taller_id: int
     
     class Config:
         from_attributes = True
+

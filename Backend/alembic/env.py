@@ -11,7 +11,8 @@ from alembic import context
 
 from app.core.database import DATABASE_URL,Base # Importa la URL de la base de datos antes base
 from app.modules.usuarios.models import Usuario, Cliente, Taller, PersonalTaller
-
+from app.modules.vehiculos.models import Vehiculo
+from app.modules.emergencias.models import Emergencia, DetalleEmergencia, Mensajeria
 
 
 

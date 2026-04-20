@@ -1,7 +1,7 @@
 # app/modules/vehiculos/models.py
 from sqlalchemy import Column, Integer, String, ForeignKey
 from sqlalchemy.orm import relationship
-from Backend.app.core.database import Base
+from app.core.database import Base
 
 class Vehiculo(Base):
     __tablename__ = "vehiculos"
@@ -18,4 +18,4 @@ class Vehiculo(Base):
     dueno = relationship("app.modules.usuarios.models.Cliente", back_populates="vehiculos")
     
     # Un vehículo puede estar en muchas emergencias a lo largo del tiempo
-    emergencias = relationship("Emergencia", back_populates="vehiculo")
+    emergencias = relationship("app.modules.emergencias.models.Emergencia", back_populates="vehiculo")

@@ -5,6 +5,7 @@ __pycache__/
 venv/
 .env
 *.db
+.md
 
 # Angular (Frontend)
 node_modules/

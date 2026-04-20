@@ -1,17 +1,22 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable, signal } from '@angular/core';
 import { tap } from 'rxjs';
-
+//import { environment } from '../../../../environments/environment';
+import { environment } from 'src/environments/environment';
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private http = inject(HttpClient);
-  private apiUrl = 'http://localhost:8000/usuarios';
+  private apiUrl = `${environment.apiUrl}/usuarios`;
 
   // Usamos un 'signal' para saber en todo momento si hay alguien logueado
   currentUser = signal<any>(null);
 
   registrarTaller(datos: any) {
     return this.http.post(`${this.apiUrl}/register-taller`, datos);
+  }
+ 
+  registrarCliente(datos: any) {
+    return this.http.post(`${this.apiUrl}/register-cliente`, datos);
   }
 
   // NUEVA FUNCIÓN PARA TU LOGIN
@@ -20,7 +25,11 @@ export class AuthService {
       tap((response) => {
         // Guardamos el token en el navegador para que no se borre al refrescar
         localStorage.setItem('access_token', response.access_token);
-        this.currentUser.set(response.user); // Guardamos info del usuario
+        if (response.user) {
+          this.currentUser.set(response.user);
+         // Opcional: persistir datos básicos del usuario (no el token) para no perderlos al recargar F5
+          localStorage.setItem('user_data', JSON.stringify(response.user));
+        }
       })
     );
   }
