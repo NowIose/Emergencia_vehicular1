@@ -2,13 +2,14 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { environment } from '../../../../environments/environment';
+import { environment } from '../../../environments/environment';
+
 @Injectable({
   providedIn: 'root'
 })
 export class MediaService {
   private http = inject(HttpClient);
-  private apiUrl = `${environment.apiUrl}/usuarios`; // Ajusta a tu URL de FastAPI
+  private apiUrl = `${environment.apiUrl}`; // Ajusta a tu URL de FastAPI
 
   uploadImage(file: File): Observable<{ url: string, public_id: string }> {
     const formData = new FormData();
