@@ -1,11 +1,12 @@
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { PersonalTaller } from '../../models/personal.model';
+import { environment  } from 'src/environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class PersonalService {
   private http = inject(HttpClient);
-  private apiUrl = 'http://localhost:8000/usuarios/personal';
+  private apiUrl = `${environment.apiUrl}`; 
 
   // Función para obtener el token del localStorage
   private getHeaders() {
