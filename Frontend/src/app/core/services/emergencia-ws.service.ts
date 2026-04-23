@@ -1,6 +1,6 @@
 import { Injectable, signal } from '@angular/core';
 import { Observable, Subject } from 'rxjs';
-
+import { environment } from 'src/environments/environment';
 export interface EmergenciaNotificacion {
   type: string;
   data: {
@@ -17,7 +17,7 @@ export interface EmergenciaNotificacion {
 })
 export class EmergenciaWsService {
   private socket: WebSocket | null = null;
-  private readonly WS_URL = 'ws://127.0.0.1:8000/emergencias/ws/taller';
+  private readonly WS_URL = `${environment.apiUrl.replace('https', 'wss')}/emergencias/ws/taller`;
   private emergenciaSubject = new Subject<EmergenciaNotificacion>();
 
   public emergencias$ = this.emergenciaSubject.asObservable();

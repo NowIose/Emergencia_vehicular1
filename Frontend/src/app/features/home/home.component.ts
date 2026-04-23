@@ -11,6 +11,7 @@ import {
   EmergenciaNotificacion,
 } from '../../core/services/emergencia-ws.service';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { environment } from 'src/environments/environment';
 
 @Component({
   selector: 'app-home',
@@ -219,7 +220,7 @@ export class HomeComponent implements OnInit {
 
     this.http
       .post(
-        `http://127.0.0.1:8000/emergencias/${emergencia.nro}/aceptar`,
+        `${environment.apiUrl}/emergencias/${emergencia.nro}/aceptar`, // <-- Ambas deben ser comillas invertidas
         { id_personal: idPersonal },
         { headers: headers },
       )
