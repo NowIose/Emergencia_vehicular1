@@ -5,7 +5,9 @@ import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
+final String _baseUrl = dotenv.env['API_URL'] ?? 'http://192.168.1.15:8000';
 
 class EmergencyBubble extends StatefulWidget {
   final int? idCliente;
@@ -50,7 +52,7 @@ class _EmergencyBubbleState extends State<EmergencyBubble> {
     try {
       const storage = FlutterSecureStorage();
       String? token = await storage.read(key: 'jwt_token');
-      final url = Uri.parse('http://10.0.2.2:8000/vehiculos/mis-vehiculos');
+      final url = Uri.parse('$_baseUrl/vehiculos/mis-vehiculos');
 
       final response = await http.get(
         url,
@@ -95,7 +97,7 @@ class _EmergencyBubbleState extends State<EmergencyBubble> {
   // 3. Subir fotos al backend (que las manda a Cloudinary)
   Future<List<String>> _subirFotos() async {
     List<String> urls = [];
-    final urlUpload = Uri.parse('http://10.0.2.2:8000/usuarios/upload-image');
+    final urlUpload = Uri.parse('$_baseUrl/usuarios/upload-image');
 
     for (File foto in _fotosTomadas) {
       var request = http.MultipartRequest('POST', urlUpload);
@@ -173,7 +175,7 @@ class _EmergencyBubbleState extends State<EmergencyBubble> {
       String? token = await storage.read(key: 'jwt_token');
 
       // Cambia esta IP por la de tu servidor backend local (ej. 10.0.2.2 para emulador Android o tu IP local para Windows/Dispositivo físico)
-      final url = Uri.parse('http://10.0.2.2:8000/emergencias/');
+      final url = Uri.parse('$_baseUrl/emergencias/');
       print("Enviando a: $url"); // Debug para ver la ruta
       print("Token: ${token != null ? 'Presente' : 'Nulo'}");
       final response = await http.post(

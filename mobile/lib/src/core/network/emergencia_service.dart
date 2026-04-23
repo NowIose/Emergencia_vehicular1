@@ -1,9 +1,10 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class EmergenciaService {
   // OJO: Usa 10.0.2.2 para emulador Android, o la IP de tu PC para dispositivo físico.
-  final String baseUrl = 'http://10.0.2.2:8000/emergencias/';
+  final String _baseUrl = dotenv.env['API_URL'] ?? 'http://192.168.1.15:8000';
 
   Future<bool> solicitarAuxilio({
     required int idVehiculo,
@@ -12,7 +13,7 @@ class EmergenciaService {
   }) async {
     try {
       final response = await http.post(
-        Uri.parse(baseUrl),
+        Uri.parse('$_baseUrl'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           "id_vehiculo": idVehiculo,

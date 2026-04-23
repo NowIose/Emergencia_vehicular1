@@ -1,17 +1,18 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class VehiculoService {
   // Si usas el emulador de Android, usa 10.0.2.2. Si es celular físico, tu IP local.
-  final String baseUrl = "http://10.0.2.2:8000";
+  final String _baseUrl = dotenv.env['API_URL'] ?? 'URL_NO_ENCONTRADA';
   final _storage = const FlutterSecureStorage();
 
   Future<void> registrarVehiculo(Map<String, dynamic> vehiculoData) async {
     final token = await _storage.read(key: 'jwt_token');
 
     final response = await http.post(
-      Uri.parse("$baseUrl/vehiculos/"),
+      Uri.parse("$_baseUrl/vehiculos/"),
       headers: {
         'Content-Type': 'application/json',
         'Authorization':
