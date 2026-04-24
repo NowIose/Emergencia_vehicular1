@@ -166,17 +166,24 @@ export class HomeComponent implements OnInit {
     this.router.navigate(['/login']);
   }
   abrirDetalleEmergencia(emergencia: any) {
+    // 1. Guardamos la emergencia en el signal
     this.emergenciaSeleccionada.set(emergencia);
-    this.personalSeleccionadoId.set(null); // Reiniciamos la selección del mecánico
+    this.personalSeleccionadoId.set(null);
 
-    // Calculamos la distancia si la emergencia tiene lat y lon
-    if (emergencia.latitud && emergencia.longitud) {
-      const dist = this.calcularDistancia(
-        this.tallerLat,
-        this.tallerLon,
-        emergencia.latitud,
-        emergencia.longitud,
-      );
+    // 2. Extraer Latitud y Longitud del string "lat, lon"
+    if (emergencia.ubicacion_real && emergencia.ubicacion_real.includes(',')) {
+      const coordenadas = emergencia.ubicacion_real.split(',');
+
+      // ✔️ SOLUCIÓN: Acceder al índice del arreglo antes del trim()
+      const lat = parseFloat(coordenadas[0].trim());
+      const lon = parseFloat(coordenadas[1].trim());
+
+      // Guardamos estos valores temporales para el mapa en el HTML
+      emergencia.latMap = lat;
+      emergencia.lonMap = lon;
+
+      // 3. Calcular distancia (usando tu función Haversine)
+      const dist = this.calcularDistancia(this.tallerLat, this.tallerLon, lat, lon);
       this.distanciaCalculada.set(dist.toFixed(2) + ' km');
     } else {
       this.distanciaCalculada.set('Ubicación no disponible');
@@ -262,5 +269,20 @@ export class HomeComponent implements OnInit {
 
   private deg2rad(deg: number): number {
     return deg * (Math.PI / 180);
+  }
+  // 1. Para que no de error el click de la foto
+  verFotoGrande(url: string) {
+    if (url) {
+      window.open(url, '_blank');
+    }
+  }
+
+  // 2. Por si acaso, la función para el mapa si prefieres manejarla desde el TS
+  abrirEnGoogleMaps() {
+    const coords = this.emergenciaSeleccionada()?.ubicacion_real;
+    if (coords) {
+      // ✔️ SOLUCIÓN: Agregar el $ y usar la URL estándar de búsqueda de Google Maps
+      window.open(`https://www.google.com/maps/search/?api=1&query=${coords}`, '_blank');
+    }
   }
 }
