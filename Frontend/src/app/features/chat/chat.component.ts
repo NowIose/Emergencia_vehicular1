@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewChild, ElementRef, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ChatService } from '../../core/services/chat.service';
@@ -12,9 +12,11 @@ import { ChatService } from '../../core/services/chat.service';
 export class ChatComponent implements OnInit, OnDestroy {
   private chatService = inject(ChatService);
   
-  chatsActivos: any[] = [];
-  mensajes: any[] = [];
-  chatSeleccionado: any = null;
+  // Usamos signals para asegurar que Angular detecte los cambios al instante
+  chatsActivos = signal<any[]>([]);
+  mensajes = signal<any[]>([]);
+  chatSeleccionado = signal<any | null>(null);
+  
   nuevoMensaje: string = '';
   myId: number | null = null;
   
@@ -57,30 +59,30 @@ export class ChatComponent implements OnInit, OnDestroy {
     console.log("⏳ Cargando chats activos...");
     this.chatService.getChatsActivos().subscribe({
       next: (chats) => {
-        this.chatsActivos = chats;
-        console.log("📥 Chats activos recibidos:", chats);
+        this.chatsActivos.set(chats);
+        console.log("📥 Chats activos cargados en el signal:", this.chatsActivos());
       },
-      error: (err) => {
-        console.error("❌ Error al cargar chats activos:", err);
-      }
+      error: (err) => console.error("❌ Error al cargar chats activos:", err)
     });
   }
 
   seleccionarChat(chat: any) {
     console.log("👉 Chat seleccionado:", chat);
-    this.chatSeleccionado = chat;
+    this.chatSeleccionado.set(chat);
     this.cargarHistorial(chat.nro_emergencia);
     this.marcarComoLeido(chat.nro_emergencia);
     
-    // Resetear contador local
-    chat.mensajes_pendientes = 0;
+    // Resetear contador local en el objeto del signal
+    this.chatsActivos.update(list => 
+      list.map(c => c.nro_emergencia === chat.nro_emergencia ? { ...c, mensajes_pendientes: 0 } : c)
+    );
   }
 
   cargarHistorial(nro: number) {
     console.log(`⏳ Cargando historial para emergencia #${nro}...`);
     this.chatService.getHistorial(nro).subscribe(msgs => {
-      this.mensajes = msgs;
-      console.log("📥 Mensajes recibidos:", msgs);
+      this.mensajes.set(msgs);
+      console.log("📥 Mensajes cargados en el signal:", this.mensajes());
       this.scrollToBottom();
     });
   }
@@ -90,25 +92,24 @@ export class ChatComponent implements OnInit, OnDestroy {
   }
 
   enviar() {
-    if (!this.nuevoMensaje.trim() || !this.chatSeleccionado) return;
+    if (!this.nuevoMensaje.trim() || !this.chatSeleccionado()) return;
 
     const texto = this.nuevoMensaje;
-    const nro = this.chatSeleccionado.nro_emergencia;
+    const nro = this.chatSeleccionado().nro_emergencia;
     
-    console.log(`📤 Enviando mensaje a emergencia #${nro}:`, texto);
-
-    // Optimistic Update
-    this.mensajes.push({
+    // Optimistic Update: Añadir mensaje al signal inmediatamente
+    this.mensajes.update(prev => [...prev, {
       id_remitente: this.myId,
       mensaje: texto,
       fecha_hora: new Date().toISOString(),
       leido: false
-    });
+    }]);
+    
+    const msgAEnviar = this.nuevoMensaje;
     this.nuevoMensaje = '';
     this.scrollToBottom();
 
-    this.chatService.enviarMensaje(nro, texto).subscribe({
-      next: () => console.log("✅ Mensaje enviado correctamente"),
+    this.chatService.enviarMensaje(nro, msgAEnviar).subscribe({
       error: (err) => console.error("❌ Error enviando mensaje", err)
     });
   }
@@ -118,49 +119,46 @@ export class ChatComponent implements OnInit, OnDestroy {
     if (payload.type === 'NEW_MESSAGE') {
       const msg = payload.data;
 
-      // --- FILTRADO DE SEGURIDAD PARA EL TALLER ---
-      // Verificamos que el mensaje pertenezca a este taller o mecánico
-      // Usamos == para permitir comparación entre string y number por si acaso
-      const esParaMi = msg.id_taller == this.myId || msg.id_personal == this.myId || msg.id_remitente == this.myId;
+      // Filtrado: ¿Este mensaje es para mi taller? (comparación flexible ==)
+      const esParaMi = msg.id_taller == this.myId || msg.id_remitente == this.myId;
+      if (!esParaMi) return;
+
+      const chatActual = this.chatSeleccionado();
       
-      if (!esParaMi) {
-        console.log("🙈 Ignorando mensaje (no es para este taller/personal)");
-        return; 
-      }
-      
-      // Si el mensaje es para el chat que tengo abierto
-      if (this.chatSeleccionado && msg.nro_emergencia === this.chatSeleccionado.nro_emergencia) {
-        // Evitar duplicar mi propio mensaje (que ya añadí por optimistic update)
+      if (chatActual && msg.nro_emergencia === chatActual.nro_emergencia) {
         if (msg.id_remitente !== this.myId) {
-          this.mensajes.push({
+          this.mensajes.update(prev => [...prev, {
             id_remitente: msg.id_remitente,
             mensaje: msg.mensaje,
             fecha_hora: new Date().toISOString(),
             leido: false
-          });
+          }]);
           this.scrollToBottom();
-          // Como lo estoy viendo, lo marco como leído
           this.marcarComoLeido(msg.nro_emergencia);
         }
       } else {
-        // Si es para otro chat, incrementar contador en la lista
-        const chat = this.chatsActivos.find(c => c.nro_emergencia === msg.nro_emergencia);
-        if (chat) {
-          chat.mensajes_pendientes++;
-          chat.ultimo_mensaje = msg.mensaje;
-          chat.fecha_ultimo_mensaje = new Date().toISOString();
-        } else {
-          // Si no existe en la lista (chat nuevo), recargar lista
-          console.log("🆕 Detectado chat nuevo o actualización, recargando lista...");
-          this.cargarChats();
-        }
+        // Actualizar contador en la lista
+        this.chatsActivos.update(list => {
+          const index = list.findIndex(c => c.nro_emergencia === msg.nro_emergencia);
+          if (index !== -1) {
+            const newList = [...list];
+            newList[index] = {
+              ...newList[index],
+              mensajes_pendientes: (newList[index].mensajes_pendientes || 0) + 1,
+              ultimo_mensaje: msg.mensaje,
+              fecha_ultimo_mensaje: new Date().toISOString()
+            };
+            return newList;
+          } else {
+            this.cargarChats(); // Chat nuevo, recargar
+            return list;
+          }
+        });
       }
     } else if (payload.type === 'MESSAGES_READ') {
       const data = payload.data;
-      if (this.chatSeleccionado && data.nro_emergencia === this.chatSeleccionado.nro_emergencia) {
-        this.mensajes.forEach(m => {
-          if (m.id_remitente === this.myId) m.leido = true;
-        });
+      if (this.chatSeleccionado() && data.nro_emergencia === this.chatSeleccionado().nro_emergencia) {
+        this.mensajes.update(msgs => msgs.map(m => m.id_remitente === this.myId ? { ...m, leido: true } : m));
       }
     }
   }

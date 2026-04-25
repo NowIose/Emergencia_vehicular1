@@ -47,21 +47,32 @@ export class ChatService {
   // --- MÉTODOS WEBSOCKET ---
 
   conectarTaller() {
-    const wsUrl = this.apiUrl.replace('http', 'ws') + '/emergencias/ws/taller';
+    // Aseguramos que la URL no tenga doble slash y sea correcta
+    const wsUrl = this.apiUrl.replace('http', 'ws').replace(/\/$/, '') + '/emergencias/ws/taller';
+    console.log('🔌 Intentando conectar WebSocket a:', wsUrl);
+    
     this.socket = new WebSocket(wsUrl);
 
-    this.socket.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      this.messageSubject.next(data);
+    this.socket.onopen = () => {
+      console.log('✅ WebSocket Chat Taller conectado con éxito');
     };
 
-    this.socket.onclose = () => {
-      console.log('WebSocket Chat Taller cerrado. Reintentando...');
+    this.socket.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        this.messageSubject.next(data);
+      } catch (e) {
+        console.error('❌ Error parseando mensaje WS:', e);
+      }
+    };
+
+    this.socket.onclose = (event) => {
+      console.log(`⚠️ WebSocket Chat Taller cerrado (Código: ${event.code}). Reintentando en 3s...`);
       setTimeout(() => this.conectarTaller(), 3000);
     };
 
     this.socket.onerror = (error) => {
-      console.error('Error WebSocket Chat:', error);
+      console.error('❌ Error en el WebSocket del Chat:', error);
     };
   }
 

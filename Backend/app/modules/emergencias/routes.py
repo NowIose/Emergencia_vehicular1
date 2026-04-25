@@ -123,12 +123,12 @@ async def aceptar_emergencia(nro: int, req: schemas.AceptarEmergenciaRequest, db
     
     # --- MENSAJE AUTOMÁTICO ---
     # Buscamos el nombre del personal para el mensaje
-    personal = db.query(PersonalTaller).filter(PersonalTaller.id == req.id_personal).first()
-    nombre_mecanico = personal.nombre_completo if personal else "un mecánico"
+    personal_obj = db.query(PersonalTaller).filter(PersonalTaller.id == req.id_personal).first()
+    nombre_mecanico = personal_obj.nombre_completo if personal_obj else "un mecánico"
     
     mensaje_auto = models.Mensajeria(
         nro_emergencia=nro,
-        id_remitente=personal.id if personal else current_user.id,
+        id_remitente=taller_id, # Enviado por el Taller (Admin) para que aparezca a la derecha en su panel
         mensaje=f"¡Hola! Soy {nombre_mecanico}. He aceptado tu solicitud y voy en camino a ayudarte."
     )
     db.add(mensaje_auto)
@@ -346,37 +346,30 @@ def obtener_lista_chats_activos(
     current_user: Usuario = Depends(get_current_user)
 ):
     """ 
-    Lista todas las emergencias 'atendiendo' para el taller 
-    con contador de mensajes no leídos.
+    Lista todas las emergencias 'atendiendo' para el taller (Admin)
+    con contador de mensajes no leídos del cliente.
     """
-    if current_user.rol.value not in ["admin_taller", "personal_taller"]:
-        raise HTTPException(status_code=403, detail="No autorizado")
+    if current_user.rol.value != "admin_taller":
+        raise HTTPException(status_code=403, detail="Solo el administrador del taller puede gestionar los chats")
 
-    # 1. Obtener las emergencias que este taller está atendiendo
-    query = db.query(models.Emergencia).filter(
-        models.Emergencia.estado == models.EstadoEmergencia.atendiendo
-    )
-    
-    # Si es personal específico (mecánico), filtramos solo las que tiene asignadas
-    if current_user.rol.value == "personal_taller":
-        query = query.filter(models.Emergencia.id_personal == current_user.id)
-    # Si es admin, filtramos por su id_taller
-    elif current_user.rol.value == "admin_taller":
-        query = query.filter(models.Emergencia.id_taller == current_user.id)
-    
-    emergencias = query.all()
+    # 1. Obtener las emergencias que este taller (Admin) está atendiendo
+    # Filtramos por id_taller para que el admin solo vea las suyas
+    emergencias = db.query(models.Emergencia).filter(
+        models.Emergencia.estado == models.EstadoEmergencia.atendiendo,
+        models.Emergencia.id_taller == current_user.id
+    ).all()
     
     resultado = []
     
     for e in emergencias:
-        # 2. Contar cuántos mensajes hay de esta emergencia que el taller NO ha leído
+        # 2. Contar mensajes del cliente que el taller NO ha leído
         no_leidos = db.query(models.Mensajeria).filter(
             models.Mensajeria.nro_emergencia == e.nro,
-            models.Mensajeria.id_remitente != current_user.id,
+            models.Mensajeria.id_remitente != current_user.id, # El remitente NO es el taller
             models.Mensajeria.leido == False
         ).count()
         
-        # 3. Obtener el texto del último mensaje para la previsualización
+        # 3. Obtener el último mensaje para previsualizar
         ultimo_msg = db.query(models.Mensajeria).filter(
             models.Mensajeria.nro_emergencia == e.nro
         ).order_by(models.Mensajeria.fecha_hora.desc()).first()
@@ -388,9 +381,10 @@ def obtener_lista_chats_activos(
             "ultimo_mensaje": ultimo_msg.mensaje if ultimo_msg else "",
             "fecha_ultimo_mensaje": ultimo_msg.fecha_hora if ultimo_msg else e.fecha_creacion,
             "id_vehiculo": e.id_vehiculo,
-            "id_taller": e.id_taller,
-            "id_personal": e.id_personal
+            "id_taller": e.id_taller
         })
+        
+    return resultado
         
        
     return resultado
