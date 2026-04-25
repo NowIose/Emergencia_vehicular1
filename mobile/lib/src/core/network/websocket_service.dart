@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class WebSocketService {
   WebSocketChannel? _channel;
@@ -13,6 +14,10 @@ class WebSocketService {
     return baseUrl.replaceFirst('http', 'ws') + '/emergencias/ws';
   }
 
+ /* String get _wsUrl {
+    // Esto cambia https:// -> wss:// o http:// -> ws:// automáticamente
+    return _baseUrl.replaceFirst('https', 'wss').replaceFirst('http', 'ws');
+  }*/
   // Conexión para el TALLER
   void connectTaller(Function(Map<String, dynamic>) onMessage) {
     print("Conectando WS Taller a: $_wsBaseUrl/taller");

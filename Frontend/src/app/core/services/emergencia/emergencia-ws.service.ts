@@ -62,4 +62,9 @@ export class EmergenciaWsService {
       this.socket = null;
     }
   }
+  // Agregamos el método para HTTP
+  getMisEmergencias(http: any, token: string): Observable<any[]> {
+    const headers = { Authorization: `Bearer ${token}` };
+    return http.get(`${environment.apiUrl}/emergencias/taller`, { headers });
+  }
 }

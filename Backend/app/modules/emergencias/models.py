@@ -16,14 +16,13 @@ class EstadoEmergencia(str, enum.Enum):
     cancelado = "cancelado"
     terminado = "terminado"
 
-# 2. Modelo Principal de Emergencia
 class Emergencia(Base):
     __tablename__ = "emergencias"
     
     nro = Column(Integer, primary_key=True, index=True)
     ubicacion_real = Column(String, comment="Coordenadas GPS del lugar del incidente") 
-    fotos = Column(JSON, nullable=True) # Lista de URLs de Cloudinary
-    audio = Column(String, nullable=True) # URL de audio de Cloudinary
+    fotos = Column(JSON, nullable=True) 
+    audio = Column(String, nullable=True) 
     descripcion = Column(String(500))
     
     prioridad = Column(SQLEnum(PrioridadEmergencia), default=PrioridadEmergencia.media)
@@ -31,21 +30,27 @@ class Emergencia(Base):
     
     fecha_creacion = Column(DateTime, default=datetime.utcnow)
 
-    # Claves Foráneas corregidas según tus modelos de usuarios
+    # --- CLAVES FORÁNEAS ---
     id_vehiculo = Column(Integer, ForeignKey("vehiculos.id"), nullable=False)
-    # Apunta a la tabla personal_taller que me pasaste
     id_personal = Column(Integer, ForeignKey("personal_taller.id"), nullable=True) 
+    id_taller = Column(Integer, ForeignKey("usuarios.id"), nullable=True) 
 
-    # Relaciones
-    # Nota: Asegúrate que en vehiculos/models.py exista el back_populates="emergencias"
+    # --- RELACIONES CORREGIDAS ---
     vehiculo = relationship("app.modules.vehiculos.models.Vehiculo", back_populates="emergencias")
     
-    # Relación con el personal que atiende (PersonalTaller)
-    personal = relationship("app.modules.usuarios.models.PersonalTaller")
+    # Aquí le indicamos que para 'personal' use específicamente 'id_personal'
+    personal = relationship(
+        "app.modules.usuarios.models.PersonalTaller", 
+        foreign_keys=[id_personal]
+    )
     
-    # Relación uno a uno con el detalle de seguimiento
+    # Añadimos la relación de taller usando 'id_taller'
+    taller = relationship(
+        "app.modules.usuarios.models.Usuario", 
+        foreign_keys=[id_taller]
+    )
+    
     detalles = relationship("DetalleEmergencia", back_populates="emergencia", uselist=False)
-
 # 3. Seguimiento en Tiempo Real (Geolocalización dinámica)
 class DetalleEmergencia(Base):
     __tablename__ = "detalle_emergencias"

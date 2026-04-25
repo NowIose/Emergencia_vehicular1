@@ -16,7 +16,9 @@
         <span class="font-bold">Panel Principal</span>
       </a>
       <a
-        class="flex items-center gap-3 p-3 hover:bg-white/5 rounded-2xl cursor-pointer opacity-70 transition-all"
+        routerLink="/emergencia"
+        routerLinkActive="opacity-100 bg-white/10"
+        class="flex items-center gap-3 p-3 hover:bg-white/10 rounded-2xl cursor-pointer transition-all opacity-70"
       >
         <span class="material-symbols-outlined">car_crash</span> Emergencias
       </a>
@@ -183,7 +185,6 @@
               Alertas Recientes
             </h3>
 
-            <!-- Si NO hay emergencias -->
             <div
               *ngIf="emergenciasPendientes().length === 0"
               class="flex flex-col items-center justify-center py-10 text-center"
@@ -197,7 +198,6 @@
               </p>
             </div>
 
-            <!-- Si HAY emergencias -->
             <div *ngIf="emergenciasPendientes().length > 0" class="space-y-4">
               <div
                 *ngFor="let emer of emergenciasPendientes()"
@@ -215,7 +215,6 @@
                   {{ emer.ubicacion_real }}
                 </div>
 
-                <!-- Fotos de la emergencia (si hay) -->
                 <div
                   *ngIf="emer.fotos && emer.fotos.length > 0"
                   class="flex gap-2 mb-4 overflow-x-auto"
@@ -264,6 +263,7 @@
         </div>
       </div>
     </div>
+
     <div *ngIf="mostrarModal()" class="fixed inset-0 z-[100] flex items-center justify-center p-4">
       <div
         class="absolute inset-0 bg-secondary/60 backdrop-blur-sm transition-opacity"
@@ -411,6 +411,7 @@
         </form>
       </div>
     </div>
+
     <div
       *ngIf="mostrarModalDetalle()"
       class="fixed inset-0 z- flex items-center justify-center p-4"
@@ -432,14 +433,25 @@
               </p>
             </div>
           </div>
-
-          <div
-            class="w-full h-48 bg-slate-200 rounded-[2rem] overflow-hidden mb-6 relative border-4 border-white shadow-sm flex items-center justify-center bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"
+          <a
+            [href]="
+              'https://www.google.com/maps/search/?api=1&query=' +
+              emergenciaSeleccionada()?.ubicacion_real
+            "
+            target="_blank"
+            class="w-full h-44 bg-blue-50 rounded-[2rem] overflow-hidden mb-6 relative border-4 border-white shadow-sm flex items-center justify-center group transition-all hover:bg-blue-100"
           >
-            <span
-              class="material-symbols-outlined text-slate-400 text-5xl bg-white p-3 rounded-full shadow-sm"
-              >map</span
+            <div
+              class="flex flex-col items-center gap-2 group-hover:scale-110 transition-transform"
             >
+              <span
+                class="material-symbols-outlined text-primary text-5xl bg-white p-3 rounded-full shadow-sm"
+                >location_on</span
+              >
+              <p class="text-[10px] font-black text-primary uppercase tracking-widest">
+                Abrir en Google Maps
+              </p>
+            </div>
 
             <div
               class="absolute bottom-4 bg-white/95 backdrop-blur px-4 py-2 rounded-xl text-xs font-bold text-slate-700 shadow-lg flex items-center gap-2"
@@ -447,31 +459,58 @@
               <span class="material-symbols-outlined text-primary text-sm">route</span>
               A {{ distanciaCalculada() }} del taller
             </div>
-          </div>
+          </a>
 
-          <div class="space-y-4">
+          <div class="space-y-6">
             <div>
-              <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                Vehículo
+              <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">
+                Evidencia del Accidente
               </p>
-              <p class="font-bold text-slate-800">{{ emergenciaSeleccionada()?.vehiculo }}</p>
+              <div class="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+                <ng-container *ngIf="emergenciaSeleccionada()?.fotos?.length; else sinFotos">
+                  <div *ngFor="let foto of emergenciaSeleccionada()?.fotos" class="flex-shrink-0">
+                    <img
+                      [src]="foto"
+                      class="w-24 h-24 object-cover rounded-2xl border-2 border-white shadow-md hover:scale-105 transition-transform cursor-pointer"
+                      (click)="verFotoGrande(foto)"
+                    />
+                  </div>
+                </ng-container>
+                <ng-template #sinFotos>
+                  <div
+                    class="w-full py-6 bg-slate-100 rounded-2xl text-center border-2 border-dashed border-slate-200"
+                  >
+                    <p class="text-[10px] font-bold text-slate-400 uppercase">
+                      Sin imágenes adjuntas
+                    </p>
+                  </div>
+                </ng-template>
+              </div>
             </div>
-            <div>
-              <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                Problema Reportado
-              </p>
-              <p class="text-sm font-medium text-slate-600">
-                {{ emergenciaSeleccionada()?.descripcion }}
-              </p>
-            </div>
-            <div>
-              <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                Ubicación
-              </p>
-              <p class="text-sm font-medium text-slate-600 flex items-center gap-1">
-                <span class="material-symbols-outlined text-red-500 text-sm">location_on</span>
-                {{ emergenciaSeleccionada()?.ubicacion_real }}
-              </p>
+
+            <div class="space-y-4">
+              <div>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                  Vehículo
+                </p>
+                <p class="font-bold text-slate-800">{{ emergenciaSeleccionada()?.vehiculo }}</p>
+              </div>
+              <div>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                  Ubicación
+                </p>
+                <p class="text-[11px] font-medium text-slate-500 truncate">
+                  {{ emergenciaSeleccionada()?.ubicacion_real }}
+                </p>
+              </div>
+              <div>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                  Problema Reportado
+                </p>
+                <p class="text-sm font-medium text-slate-600">
+                  {{ emergenciaSeleccionada()?.descripcion }}
+                </p>
+              </div>
             </div>
           </div>
         </div>

@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:http_parser/http_parser.dart';
 
 final String _baseUrl = dotenv.env['API_URL'] ?? 'http://192.168.1.15:8000';
 
@@ -99,16 +100,44 @@ class _EmergencyBubbleState extends State<EmergencyBubble> {
     List<String> urls = [];
     final urlUpload = Uri.parse('$_baseUrl/usuarios/upload-image');
 
+    const storage = FlutterSecureStorage();
+    String? token = await storage.read(key: 'jwt_token');
+
     for (File foto in _fotosTomadas) {
       var request = http.MultipartRequest('POST', urlUpload);
-      request.files.add(await http.MultipartFile.fromPath('file', foto.path));
+
+      // --- CAMBIO AQUÍ: Forzar el tipo MIME a image/jpeg ---
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'file',
+          foto.path,
+          contentType: MediaType(
+            'image',
+            'jpeg',
+          ), // Le dice a FastAPI que es una imagen segura
+        ),
+      );
+
       request.fields['folder'] = 'emergencia_vehicular/emergencias';
 
-      var response = await request.send();
-      if (response.statusCode == 201 || response.statusCode == 200) {
+      request.headers.addAll({
+        'Accept': 'application/json',
+        if (token != null) 'Authorization': 'Bearer $token',
+      });
+
+      try {
+        var response = await request.send();
         var respStr = await response.stream.bytesToString();
-        var jsonResp = jsonDecode(respStr);
-        urls.add(jsonResp['url']);
+
+        if (response.statusCode == 201 || response.statusCode == 200) {
+          var jsonResp = jsonDecode(respStr);
+          urls.add(jsonResp['url']);
+        } else {
+          debugPrint("❌ Error al subir foto. Status: ${response.statusCode}");
+          debugPrint("❌ Body de respuesta: $respStr");
+        }
+      } catch (e) {
+        debugPrint("❌ Excepción de red al subir foto: $e");
       }
     }
     return urls;
@@ -169,6 +198,7 @@ class _EmergencyBubbleState extends State<EmergencyBubble> {
       if (_fotosTomadas.isNotEmpty) {
         setState(() => _isUploadingFotos = true);
         fotosUrls = await _subirFotos();
+        print("URLS de las fotos subidas: $fotosUrls");
         setState(() => _isUploadingFotos = false);
       }
       const storage = FlutterSecureStorage();

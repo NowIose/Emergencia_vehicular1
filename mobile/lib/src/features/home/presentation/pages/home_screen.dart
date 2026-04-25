@@ -6,6 +6,9 @@ import '../../../../core/theme/app_colors.dart';
 import '../widgets/Emergency_bubble.dart';
 // Ajusta la cantidad de "../" dependiendo de qué tan profundo esté tu HomeScreen
 import '../../../vehiculos/presentation/pages/agregar_vehiculo_screen.dart';
+import '../../../emergencies/presentation/pages/mis_emergencias_screen.dart';
+import '../../../../core/network/workshop_service.dart';
+import '../../../workshops/domian/workshop_model.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -17,10 +20,34 @@ class _HomeScreenState extends State<HomeScreen> {
   final _storage = const FlutterSecureStorage();
   String userName = "Usuario"; // Nombre por defecto
 
+  List<WorkshopModel> _topWorkshops = [];
+  bool _isLoadingWorkshops = true;
+  final WorkshopService _workshopService = WorkshopService();
+
   @override
   void initState() {
     super.initState();
     _loadUserData(); // Cargamos el nombre al iniciar
+    _loadTopWorkshops();
+  }
+
+  Future<void> _loadTopWorkshops() async {
+    try {
+      final workshops = await _workshopService.getWorkshops();
+      if (mounted) {
+        setState(() {
+          // Tomar los 3 mejores (ya vienen ordenados por el Backend)
+          _topWorkshops = workshops.take(3).toList();
+          _isLoadingWorkshops = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingWorkshops = false;
+        });
+      }
+    }
   }
 
   Future<void> _loadUserData() async {
@@ -103,6 +130,25 @@ class _HomeScreenState extends State<HomeScreen> {
                         context,
                         MaterialPageRoute(
                           builder: (context) => AgregarVehiculoScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  ListTile(
+                    leading: Icon(Icons.car_crash, color: AppColors.primary),
+                    title: const Text(
+                      'Mis Emergencias',
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    onTap: () {
+                      Navigator.pop(context); // Cierra el menú lateral primero
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const MisEmergenciasScreen(),
                         ),
                       );
                     },
@@ -306,21 +352,28 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    _buildWorkshopCard(
-                      imageUrl:
-                          'https://lh3.googleusercontent.com/aida-public/AB6AXuDPC93jMkMnVC9L8gZuyfOaFiF3DD6B7uwyT-oyW5dYLr3oMRXtWL5SIf6BbSCE6ac5wPzKTHetj_A568xQmHwzEKKH4C7_zatMK9tPaYJlFVqzeYHDg3hoA3QvIN8IYJ92ZtR8nHqSXE59Wi-Tc87Dp0UWwRVQGndxPp1fATFNgInMxLHEaThCtg0HIuCCf4XXnlmGICBSKL9aGQl2eADL78tq_0BXCix--E4uRuBliTtQfLH-g7dx_P2ER4oKJ10L72ljDmXYfSSR',
-                      title: 'Taller Central Pro',
-                      location: 'Madrid, Centro',
-                      rating: '4.8',
-                    ),
-                    const SizedBox(height: 24),
-                    _buildWorkshopCard(
-                      imageUrl:
-                          'https://lh3.googleusercontent.com/aida-public/AB6AXuCpwUodNfv7vtoedN86FjpAREOGn6c64Ya35SWCIBp3QqaxsakTWFLPGIwrHElLxydNGh2vnKaZpd0lgCxEArsMWdT3IUR-zL3NTTKQ7bnfzAypaWZv23PqqPb6lp_8JAnqVQDOlgXo4-EvYq7s9B88iZhZbvk8hYrxdlb4OWAeENaDHKuin44u0Dzr9Iw0K3JppodJvz_lSb4hU2HeP29_Z27K9pn6EsfSo5uK2EtXj8mNawUNeSOUcCmeoMwo9AU7dofci0xr4E-3',
-                      title: 'Mecánica Avanzada',
-                      location: 'Barcelona, Diagonal',
-                      rating: '4.9',
-                    ),
+                    _isLoadingWorkshops
+                        ? const Center(child: CircularProgressIndicator())
+                        : _topWorkshops.isEmpty
+                        ? const Text('No hay talleres destacados aún.')
+                        : Column(
+                            children: _topWorkshops.map((taller) {
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 24.0),
+                                child: _buildWorkshopCard(
+                                  imageUrl:
+                                      taller.fotoPerfil ??
+                                      'https://lh3.googleusercontent.com/aida-public/AB6AXuDPC93jMkMnVC9L8gZuyfOaFiF3DD6B7uwyT-oyW5dYLr3oMRXtWL5SIf6BbSCE6ac5wPzKTHetj_A568xQmHwzEKKH4C7_zatMK9tPaYJlFVqzeYHDg3hoA3QvIN8IYJ92ZtR8nHqSXE59Wi-Tc87Dp0UWwRVQGndxPp1fATFNgInMxLHEaThCtg0HIuCCf4XXnlmGICBSKL9aGQl2eADL78tq_0BXCix--E4uRuBliTtQfLH-g7dx_P2ER4oKJ10L72ljDmXYfSSR',
+                                  title: taller.nombreTaller,
+                                  location: taller.ciudad,
+                                  rating: taller.calificacionPromedio > 0
+                                      ? taller.calificacionPromedio
+                                            .toStringAsFixed(1)
+                                      : 'Nuevo',
+                                ),
+                              );
+                            }).toList(),
+                          ),
                   ],
                 ),
               ),

@@ -5,7 +5,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class VehiculoService {
   // Si usas el emulador de Android, usa 10.0.2.2. Si es celular físico, tu IP local.
-  final String _baseUrl = dotenv.env['API_URL'] ?? 'URL_NO_ENCONTRADA';
+  final String _baseUrl = dotenv.env['API_URL'] ?? 'http://192.168.1.15:8000';
   final _storage = const FlutterSecureStorage();
 
   Future<void> registrarVehiculo(Map<String, dynamic> vehiculoData) async {

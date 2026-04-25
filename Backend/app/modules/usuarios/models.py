@@ -67,3 +67,24 @@ class PersonalTaller(Usuario):
     taller = relationship("Taller", back_populates="personal", foreign_keys=[taller_id])
     
     __mapper_args__ = {"polymorphic_identity": "personal_taller"}
+
+from sqlalchemy import Column, Integer, String, ForeignKey, Float, DateTime
+from sqlalchemy.orm import relationship
+from datetime import datetime
+
+class CalificacionTaller(Base):
+    __tablename__ = "calificaciones_talleres"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    cliente_id = Column(Integer, ForeignKey("perfil_clientes.id"), nullable=False)
+    taller_id = Column(Integer, ForeignKey("perfil_talleres.id"), nullable=False)
+    # Relacionarlo con la emergencia es clave para validar que sí lo atendió
+    emergencia_id = Column(Integer, nullable=False) # Si tienes una tabla de emergencias, ponle ForeignKey
+    
+    puntuacion = Column(Float, nullable=False) # Ej: 1.0 a 5.0
+    comentario = Column(String(255), nullable=True)
+    fecha_calificacion = Column(DateTime, default=datetime.utcnow)
+
+    # Relaciones
+    cliente = relationship("Cliente", backref="calificaciones_dadas")
+    taller = relationship("Taller", backref="calificaciones_recibidas")
