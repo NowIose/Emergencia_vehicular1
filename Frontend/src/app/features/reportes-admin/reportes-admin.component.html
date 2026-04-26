@@ -1,0 +1,68 @@
+<div class="p-6 bg-slate-50 min-h-screen">
+  <div class="flex justify-between items-center mb-6">
+    <h2 class="text-2xl font-black text-slate-800 tracking-tight">Reporte Maestro de Usuarios</h2>
+    
+    <div class="flex gap-3"> <button (click)="descargarExcel()" class="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl transition-all shadow-sm text-sm font-bold">
+        <span class="material-symbols-outlined text-sm">description</span> Exportar Excel
+      </button>
+
+      <button (click)="descargarPDF()" class="btn-pdf-admin">
+        <span class="material-symbols-outlined text-sm">download</span> Exportar PDF
+      </button>
+    </div>
+  </div>
+
+  <div class="bg-white p-4 rounded-2xl shadow-sm mb-6 flex gap-4 items-end border border-slate-100">
+    
+    <div class="flex-grow">
+      <label class="text-xs font-bold text-slate-400 uppercase mb-2 block">Filtrar por Rol</label>
+      <select class="form-select w-full rounded-xl border-slate-200" [(ngModel)]="filtroRol" (change)="cargarDatos()">
+        <option value="">Todos los Usuarios</option>
+        <option value="ADMIN_TALLER">Talleres</option>
+        <option value="CLIENTE">Clientes</option>
+      </select>
+    </div>
+
+    <div class="flex-grow" *ngIf="filtroRol === 'ADMIN_TALLER'">
+      <label class="text-xs font-bold text-slate-400 uppercase mb-2 block">Ordenar por Calificación</label>
+      <select class="form-select w-full rounded-xl border-slate-200" [(ngModel)]="filtroOrden" (change)="cargarDatos()">
+        <option value="">Sin orden específico</option>
+        <option value="mejor_calificados">Mejores calificados (⭐)</option>
+        <option value="peor_calificados">Peores calificados</option>
+      </select>
+    </div>
+    
+  </div>
+
+  <div class="bg-white rounded-2xl shadow-sm overflow-hidden border border-slate-100" id="tablaAdmin">
+    <table class="w-full text-left border-collapse">
+      <thead class="bg-slate-50 text-slate-400 uppercase text-[10px] font-black">
+        <tr>
+          <th class="p-4">ID</th>
+          <th class="p-4">Nombre / Taller</th>
+          <th class="p-4">Email</th>
+          <th class="p-4">Rol</th>
+          <th class="p-4">Calificación / Contacto</th>
+        </tr>
+      </thead>
+      <tbody class="text-slate-600 font-medium">
+        <tr *ngIf="usuarios.length === 0">
+          <td colspan="5" class="p-8 text-center text-slate-400 italic">No se encontraron registros...</td>
+        </tr>
+
+        <tr *ngFor="let u of usuarios" class="border-t border-slate-50 hover:bg-slate-50/50 transition-colors">
+          <td class="p-4 text-xs">#{{ u.id }}</td>
+          <td class="p-4 font-bold text-slate-800">{{ u.nombre }}</td>
+          <td class="p-4 text-sm">{{ u.email }}</td>
+          <td class="p-4">
+            <span [ngClass]="u.rol.toLowerCase() === 'cliente' ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600'" 
+                  class="px-3 py-1 rounded-full text-[10px] font-black uppercase">
+              {{ u.rol }}
+            </span>
+          </td>
+          <td class="p-4 text-sm font-semibold text-slate-700">{{ u.extra }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

@@ -1,0 +1,55 @@
+<div class="container mt-4">
+  <h2>Análisis de Emergencias</h2>
+
+  <div class="card mb-4 p-3 shadow-sm">
+    <div class="row g-3 align-items-end">
+      
+      <div class="col-md-3">
+        <label>Fecha Inicio:</label>
+        <input type="date" class="form-control" [(ngModel)]="fechaInicio">
+      </div>
+      
+      <div class="col-md-3">
+        <label>Fecha Fin:</label>
+        <input type="date" class="form-control" [(ngModel)]="fechaFin">
+      </div>
+
+      <div class="col-md-3">
+        <label>Agrupar por:</label>
+        <select class="form-select" [(ngModel)]="agrupacion">
+          <option value="dia">Día</option>
+          <option value="mes">Mes</option>
+        </select>
+      </div>
+      
+      <div class="col-md-3">
+        <button class="btn btn-primary w-100" (click)="cargarGrafico()">
+          Generar Gráfico
+        </button>
+      </div>
+
+      <div class="col-12 d-flex justify-content-end mt-2"> 
+        <button class="btn btn-danger" (click)="descargarPDF()" [disabled]="lineChartData.datasets[0].data.length === 0">
+          <i class="bi bi-file-earmark-pdf"></i> Exportar PDF
+        </button>
+      </div>
+
+    </div>
+</div>
+  <div class="card shadow-sm p-4" *ngIf="lineChartData.datasets[0].data.length > 0; else noData">
+    <h3 class="text-center">Reporte de Emergencias</h3>
+    <p class="text-muted text-center">Rango: {{fechaInicio}} al {{fechaFin}}</p>
+    <canvas baseChart
+      [data]="lineChartData"
+      [options]="lineChartOptions"
+      [type]="'line'">
+    </canvas>
+  </div>
+
+  <ng-template #noData>
+    <div class="alert alert-info text-center">
+      No hay datos de emergencias para este rango de fechas.
+    </div>
+  </ng-template>
+
+</div>

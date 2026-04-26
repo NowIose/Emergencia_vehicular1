@@ -120,3 +120,12 @@ class TallerResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class ReporteDetalladoUsuario(BaseModel):
+    id: int
+    email: EmailStr
+    rol: str
+    nombre: str
+    extra: Optional[str] = None # Aquí irá la calificación o el teléfono
+    
+    class Config:
+        from_attributes = True

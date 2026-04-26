@@ -46,6 +46,7 @@ export class HomeComponent implements OnInit {
   // Variables de estado simples
   // Se usan directo en el HTML: {{ tallerNombre }}
   tallerNombre: string = 'Taller';
+<<<<<<< ours
   tallerLat: number = 0; // Coordenadas de tu taller
   tallerLon: number = 0;
   serviciosPendientes: number = 0;
@@ -66,6 +67,9 @@ export class HomeComponent implements OnInit {
       foto_perfil: [''],
     });
   }
+=======
+  userRole: string = '';
+>>>>>>> theirs
   ngOnInit() {
     // 1. Cargar datos del perfil desde localStorage
     this.cargarDatosPerfil();
@@ -89,9 +93,13 @@ export class HomeComponent implements OnInit {
       try {
         const userData = JSON.parse(userDataJson);
         this.tallerNombre = userData.nombre || 'Taller';
+<<<<<<< ours
         // Asignamos las coordenadas del taller si existen en tu JSON
         this.tallerLat = userData.latitud || -17.7833; // Ejemplo: Santa Cruz
         this.tallerLon = userData.longitud || -63.1821;
+=======
+        this.userRole = userData.rol || '';
+>>>>>>> theirs
       } catch (error) {
         console.error('Error al parsear user_data:', error);
       }

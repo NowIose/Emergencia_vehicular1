@@ -12,6 +12,8 @@ from app.modules.emergencias import models as emergencias_models
 from app.modules.usuarios.routes import router as usuarios_router
 from app.modules.vehiculos.routes import router as vehiculos_router
 # from app.modules.emergencias.routes import router as emergencias_router
+from app.modules.emergencias.reportes import router as reportes_router
+from app.modules.reportes.routes import router as reportes_admin_router
 
 app = FastAPI(title="Emergencia Vehicular API")
 # Configurar quién tiene permiso de hablar con el servidor
@@ -31,3 +33,5 @@ CORSMiddleware,
 app.include_router(usuarios_router)
 app.include_router(vehiculos_router)
 app.include_router(emergencias_router)
+app.include_router(reportes_router)
+app.include_router(reportes_admin_router)
