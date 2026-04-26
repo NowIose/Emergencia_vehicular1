@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 
 from app.core.database import get_db
 from .models import Taller, UserRole, Cliente
 from .schemas import TallerCreate, ClienteCreate
+from app.modules.bitacora.utils import registrar_evento
 
 router = APIRouter(prefix="/usuarios", tags=["Usuarios"])
 #pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto") #como que este no es necesario
@@ -135,16 +136,19 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
 
 @router.post("/login", response_model=TokenResponse)
 def login(
-    request: LoginRequest,
+    login_data: LoginRequest,
+    fastapi_request: Request,
     # form_data: OAuth2PasswordRequestForm = Depends(),  #ACTIVA ESTO SI QUIERES USAR EL FORMULARIO ESTÁNDAR DE OAuth2 (con campos 'username' y 'password')
     db: Session = Depends(get_db)):
     """
     Autentica usuario (email + contraseña) y genera token JWT.
     """
     # Llama a authenticate_user de services.py
-    user = authenticate_user(db, request.email, request.password) # Cambia request.email por form_data.username si usas el formulario estándar de OAuth2
+    user = authenticate_user(db, login_data.email, login_data.password) # Cambia login_data.email por form_data.username si usas el formulario estándar de OAuth2
     
     if not user:
+        # Registrar intento fallido
+        registrar_evento(db, fastapi_request, "Inicio de sesión fallido", f"Intento con email: {login_data.email}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Email o contraseña incorrectos",
@@ -161,6 +165,9 @@ def login(
         # Buscamos en la tabla de talleres
         taller = db.query(Taller).filter(Taller.id == user.id).first()
         nombre_usuario = taller.nombre_taller if taller else "Taller"
+    elif user.tipo_perfil == "admin":
+        nombre_usuario = "Administrador"
+
     access_token = create_access_token(
         data={
             "sub": str(user.id), 
@@ -170,6 +177,9 @@ def login(
         }
     )
     
+    # Registrar inicio de sesión exitoso
+    registrar_evento(db, fastapi_request, "Inicio de sesión", f"Usuario {user.email} ha iniciado sesión", usuario=user)
+
     return {              # "access_token": access_token, "token_type": "bearer"
         "access_token": access_token, 
         "token_type": "bearer",

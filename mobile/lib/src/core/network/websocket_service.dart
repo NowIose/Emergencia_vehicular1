@@ -10,7 +10,7 @@ class WebSocketService {
   // Si API_URL es http://192.168.1.15:8000, 
   // el WS será ws://192.168.1.15:8000/emergencias/ws
   String get _wsBaseUrl {
-    final baseUrl = dotenv.env['API_URL'] ?? 'http://10.0.2.2:8000';
+    final baseUrl = dotenv.env['API_URL'] ?? 'http://192.168.1.3:8000s';
     return baseUrl.replaceFirst('http', 'ws') + '/emergencias/ws';
   }
 

@@ -6,6 +6,7 @@ import { LandingComponent } from './features/home-page/landing.component';
 import { ChatComponent } from './features/chat/chat.component';
 import { EmergenciasTallerComponent } from './features/emergencia/emergencia.component';
 import { DashboardComponent } from './features/home/dashboard/dashboard.component';
+import { BitacoraComponent } from './features/taller/bitacora/bitacora.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'landing', pathMatch: 'full' },
@@ -19,6 +20,7 @@ export const routes: Routes = [
       { path: '', component: DashboardComponent },
       { path: 'emergencia', component: EmergenciasTallerComponent },
       { path: 'chat', component: ChatComponent },
+      { path: 'bitacora', component: BitacoraComponent },
     ]
   },
 ];

@@ -4,6 +4,7 @@ from app.core.database import Base
 import enum
 
 class UserRole(enum.Enum):
+    ADMIN_SISTEMA = "admin_sistema"
     ADMIN_TALLER = "admin_taller"
     PERSONAL_TALLER = "personal_taller"
     CLIENTE = "cliente"
@@ -21,6 +22,13 @@ class Usuario(Base):
         "polymorphic_identity": "usuario",
         "polymorphic_on": tipo_perfil,
     }
+
+class Administrador(Usuario):
+    __tablename__ = "perfil_administradores"
+    id = Column(Integer, ForeignKey("usuarios.id"), primary_key=True)
+    nombre_completo = Column(String(100))
+
+    __mapper_args__ = {"polymorphic_identity": "admin"}
 
 class Cliente(Usuario):
     __tablename__ = "perfil_clientes"

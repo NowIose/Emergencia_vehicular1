@@ -7,10 +7,12 @@ from app.modules.emergencias.routes import router as emergencias_router
 from app.modules.usuarios import models as usuarios_models
 from app.modules.vehiculos import models as vehiculos_models
 from app.modules.emergencias import models as emergencias_models
+from app.modules.bitacora import models as bitacora_models
 # ---------------------------------------
 
 from app.modules.usuarios.routes import router as usuarios_router
 from app.modules.vehiculos.routes import router as vehiculos_router
+from app.modules.bitacora.routes import router as bitacora_router
 # from app.modules.emergencias.routes import router as emergencias_router
 
 app = FastAPI(title="Emergencia Vehicular API")
@@ -31,3 +33,4 @@ CORSMiddleware,
 app.include_router(usuarios_router)
 app.include_router(vehiculos_router)
 app.include_router(emergencias_router)
+app.include_router(bitacora_router)
