@@ -220,27 +220,53 @@
       </div>
 
           <!-- Campos de latitud y longitud, solo lectura  por el momento-->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-        <div class="space-y-1">
-          <label class="text-xs font-bold text-slate-500 ml-1 uppercase">Latitud (Auto)</label>
-          <div class="relative">
-            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">map</span>
-            <input formControlName="latitud" type="number" readonly
-                  class="w-full pl-10 pr-4 py-3 bg-slate-100 border-none rounded-xl text-slate-500 cursor-not-allowed" />
-          </div>
-        </div>
-
-
-        <div class="space-y-1">
-          <label class="text-xs font-bold text-slate-500 ml-1 uppercase">Longitud (Auto)</label>
-          <div class="relative">
-            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">explore</span>
-            <input formControlName="longitud" type="number" readonly
-                  class="w-full pl-10 pr-4 py-3 bg-slate-100 border-none rounded-xl text-slate-500 cursor-not-allowed" />
-          </div>
-        </div>
+        <div class="space-y-4 pt-2">
+  <div class="flex items-center justify-between">
+    <label class="text-xs font-bold text-slate-500 ml-1 uppercase">Ubicación del Taller</label>
+    <button 
+      type="button" 
+      (click)="obtenerUbicacion()"
+      class="text-xs flex items-center gap-1 font-bold text-primary hover:text-red-700 transition-colors">
+      <span class="material-symbols-outlined text-sm">my_location</span>
+      OBTENER MI UBICACIÓN ACTUAL
+    </button>
+  </div>
+  <div 
+    id="mapa-registro" 
+    [style.display]="registerForm.get('latitud')?.value ? 'block' : 'none'"
+    class="w-full h-52 rounded-2xl border-2 border-slate-100 shadow-inner bg-slate-200 overflow-hidden mb-2 z-0">
+    </div>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div class="space-y-1">
+      <div class="relative">
+        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">map</span>
+        <input 
+          formControlName="latitud" 
+          type="number" 
+          step="any"
+          readonly
+          class="w-full pl-10 pr-4 py-3 bg-slate-100 border-none rounded-xl text-slate-600 font-mono text-sm cursor-not-allowed" 
+          placeholder="Latitud" />
       </div>
+    </div>
+
+    <div class="space-y-1">
+      <div class="relative">
+        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">explore</span>
+        <input 
+          formControlName="longitud" 
+          type="number" 
+          step="any"
+          readonly
+          class="w-full pl-10 pr-4 py-3 bg-slate-100 border-none rounded-xl text-slate-600 font-mono text-sm cursor-not-allowed" 
+          placeholder="Longitud" />
+      </div>
+    </div>
+  </div>
+  <p class="text-[10px] text-slate-400 italic px-1">
+    * Asegúrate de estar físicamente en el taller al presionar el botón para una precisión exacta.
+  </p>
+</div>
 
 
         <div class="space-y-1">

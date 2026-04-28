@@ -4,7 +4,7 @@ import { AuthService } from '../../../core/services/auth/auth.service';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { MediaService } from '../../../core/services/media.service';
-
+import * as L from 'leaflet';
 
 @Component({
   selector: 'app-register',
@@ -17,6 +17,8 @@ export class RegisterComponent implements OnDestroy {
   private authService = inject(AuthService);
   private router = inject(Router);
   private cdr = inject(ChangeDetectorRef);
+  private map: any;
+  private marker: any;
   // Definimos el formulario con los nombres que pusimos en el HTML
   registerForm = this.fb.group({
     email: ['', [Validators.required, Validators.email]],
@@ -67,6 +69,7 @@ export class RegisterComponent implements OnDestroy {
     } else {
       alert('Por favor, completa todos los campos obligatorios.');
     }
+
   }
 
   fotoPrevisualizacion: string = ''; // Para mostrar la imagen subida en el formulario
@@ -112,6 +115,78 @@ export class RegisterComponent implements OnDestroy {
   ngOnDestroy() {
     this.ejecutarLimpiezaHuerfana();
   }
+  obtenerUbicacion() {
+    // 1. LIMPIEZA COMPLETA: Eliminamos todo el bloque de 'L.icon' y 'L.Marker.prototype'
+    // que tenías al principio. Ese código local chocaba con el de la CDN.
+
+    if ('geolocation' in navigator) {
+      console.log('Solicitando geolocalización...');
+      navigator.geolocation.getCurrentPosition((position) => {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+
+        console.log('Ubicación obtenida:', lat, lng);
+
+        // Asignamos valores al formulario
+        this.registerForm.patchValue({ latitud: lat, longitud: lng });
+        
+        
+        // Llamamos a la función que dibuja el mapa
+        this.mostrarMapa(lat, lng);
+        
+        // Forzamos la detección de cambios para Angular
+        this.cdr.detectChanges();
+      }, (error) => {
+        console.error('Error de geolocalización:', error);
+        alert('Error al obtener ubicación: ' + error.message);
+      }, { 
+        enableHighAccuracy: true, // Pedimos máxima precisión
+        timeout: 10000,          // Esperamos hasta 10 segundos
+        maximumAge: 0            // No queremos ubicaciones cacheadas
+      });
+    } else {
+      alert('Tu navegador no soporta geolocalización.');
+    }
+  }
+
+private mostrarMapa(lat: number, lng: number) {
+  setTimeout(() => {
+    const container = document.getElementById('mapa-registro');
+    if (!container) return;
+
+    if (!this.map) {
+      // 1. Configuramos el icono ANTES de crear el marcador
+      const iconDefault = L.icon({
+        iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+        iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+        shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+      });
+
+      // 2. Bajamos el zoom inicial a 15 para que cargue más contexto alrededor
+      this.map = L.map('mapa-registro').setView([lat, lng], 15);
+      
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap',
+        maxZoom: 19,
+      }).addTo(this.map);
+
+      // 3. Creamos el marcador con el icono configurado
+      this.marker = L.marker([lat, lng], { icon: iconDefault }).addTo(this.map);
+      
+    } else {
+      // Si el mapa ya existe, actualizamos posición
+      this.map.setView([lat, lng], 15);
+      this.marker.setLatLng([lat, lng]);
+      
+      // Muy importante: esto corrige errores de carga visual
+      setTimeout(() => {
+        this.map.invalidateSize();
+      }, 200);
+    }
+  }, 100);
+}
 
   // Caso B: Si el usuario cierra la pestaña o recarga
   @HostListener('window:beforeunload', ['$event'])
