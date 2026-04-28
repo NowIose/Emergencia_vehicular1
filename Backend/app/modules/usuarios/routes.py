@@ -31,34 +31,6 @@ from pydantic import BaseModel
 #es un descriptor que le dice a FastAPI donde pedir el token en este caso el endpoint /login
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="usuarios/login")
 
-'''@router.post("/register-taller", status_code=status.HTTP_201_CREATED)
-def register_taller(obj_in: TallerCreate, db: Session = Depends(get_db)):
-    # ... validación de existencia ...
-
-    nuevo_taller = Taller(
-        email=obj_in.email,
-        password_hash=pwd_context.hash(obj_in.password),
-        rol=UserRole.ADMIN_TALLER,
-        tipo_perfil="taller", # Mantén esta línea para la herencia polimórfica
-        nombre_taller=obj_in.nombre_taller, # Ahora coinciden ambos lados
-        nit=obj_in.nit,
-        ciudad=obj_in.ciudad,
-        direccion=obj_in.direccion
-    )
-    
-    try:
-        db.add(nuevo_taller)
-        db.commit()
-        db.refresh(nuevo_taller)
-        
-        # Opcional: Registrar actividad en la bitácora usando tu service
-        # registrar_actividad(db, nuevo_taller.id, "Registro de taller nuevo")
-        
-        return {"message": "Taller registrado", "id": nuevo_taller.id}
-    except Exception as e:
-        db.rollback() # Siempre haz rollback si falla el commit
-        print(f"ERROR REAL: {e}") # Mira esto en la terminal de VS Code
-        raise HTTPException(status_code=500, detail=str(e))'''
 @router.post("/register-taller", status_code=status.HTTP_201_CREATED)
 def register_taller(obj_in: TallerCreate, fastapi_request: Request, db: Session = Depends(get_db)):
     # 1. Verificar si el email ya existe
@@ -78,31 +50,8 @@ def register_taller(obj_in: TallerCreate, fastapi_request: Request, db: Session 
         print(f"ERROR EN REGISTRO: {e}")
         #raise HTTPException(status_code=500, detail="Error interno al registrar el taller")
         raise HTTPException(status_code=500, detail=str(e))
-'''def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
-    """
-    Valida el token JWT y devuelve el usuario.
-    Se ejecuta automáticamente cuando un endpoint la usa como Depends.
-    """
-    print(f"TOKEN RECIBIDO: {token}")
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="No autorizado - token inválido",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-    try:
-        # Decodifica el token JWT
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
-        user_id: str = payload.get("sub")  # Extrae el user_id del token
-        if user_id is None:
-            raise credentials_exception
-    except jwt.InvalidTokenError:
-        raise credentials_exception
+
     
-    # Busca el usuario en la BD
-    user = db.query(Usuario).filter(Usuario.id == int(user_id)).first()
-    if user is None:
-        raise credentials_exception
-    return user'''
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,

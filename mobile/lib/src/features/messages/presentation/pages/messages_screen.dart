@@ -68,7 +68,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
               backgroundColor: AppColors.surface.withOpacity(0.7),
               elevation: 0,
               title: const Text(
-                'Kinetic Trust',
+                'Emergencia Vehicular',
                 style: TextStyle(
                   fontFamily: 'Manrope',
                   fontWeight: FontWeight.bold,

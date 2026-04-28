@@ -31,8 +31,8 @@ def create_taller_service(db: Session, obj_in: TallerCreate):
         nit=obj_in.nit,
         ciudad=obj_in.ciudad,
         direccion=obj_in.direccion,
-        latitud=0.0, # Valor por defecto mientras implementan el GPS
-        longitud=0.0
+        latitud=obj_in.latitud,
+        longitud=obj_in.longitud,
     )
     
     try:

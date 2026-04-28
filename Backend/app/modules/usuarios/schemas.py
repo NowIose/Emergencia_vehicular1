@@ -15,7 +15,7 @@ class TallerCreate(BaseModel):
     
     # --- ATRIBUTOS QUE FALTABAN ---
     # Los ponemos como Optional para que el registro no falle si el 
-    # frontend aún no implementa GPS o Cloudinary
+    # frontend aún no implementa GPS 
     latitud: Optional[float] = 0.0
     longitud: Optional[float] = 0.0
     foto_perfil: Optional[str] 

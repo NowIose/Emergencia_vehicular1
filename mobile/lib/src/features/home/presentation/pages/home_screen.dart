@@ -184,7 +184,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         //),
                         const SizedBox(width: 8),
                         const Text(
-                          'Kinetic Trust',
+                          'Emergencia Vehicular',
                           style: TextStyle(
                             fontFamily: 'Manrope',
                             fontWeight: FontWeight.bold,

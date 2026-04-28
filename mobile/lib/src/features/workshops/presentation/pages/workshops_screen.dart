@@ -35,7 +35,7 @@ class _WorkshopsScreenState extends State<WorkshopsScreen> {
               backgroundColor: AppColors.surface.withOpacity(0.7),
               elevation: 0,
               title: const Text(
-                'Kinetic Trust',
+                'Emergencia Vehicular',
                 style: TextStyle(
                   color: Colors.black87,
                   fontWeight: FontWeight.bold,
@@ -92,7 +92,7 @@ class _WorkshopsScreenState extends State<WorkshopsScreen> {
                   children: [
                     _buildFilterChip('Todos', isSelected: true),
                     _buildFilterChip('Cercanos'),
-                    _buildFilterChip('Mejor valorados'),
+                  //  _buildFilterChip('Mejor valorados'),
                     _buildFilterChip('Especializados'),
                   ],
                 ),

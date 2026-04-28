@@ -216,7 +216,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     child: TextButton(
                                       onPressed: () {},
                                       child: Text(
-                                        '¿Olvidaste tu contraseña?',
+                                        'inicia sesion para empezar',
                                         style: Theme.of(context)
                                             .textTheme
                                             .labelMedium
