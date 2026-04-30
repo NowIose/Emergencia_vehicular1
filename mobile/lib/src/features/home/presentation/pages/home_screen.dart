@@ -8,6 +8,7 @@ import '../widgets/Emergency_bubble.dart';
 import '../../../vehiculos/presentation/pages/agregar_vehiculo_screen.dart';
 import '../../../emergencies/presentation/pages/mis_emergencias_screen.dart';
 import '../../../../core/network/workshop_service.dart';
+import '../../../../core/network/websocket_service.dart';
 import '../../../workshops/domian/workshop_model.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -19,16 +20,24 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final _storage = const FlutterSecureStorage();
   String userName = "Usuario"; // Nombre por defecto
+  int? _userId;
 
   List<WorkshopModel> _topWorkshops = [];
   bool _isLoadingWorkshops = true;
   final WorkshopService _workshopService = WorkshopService();
+  final WebSocketService _wsService = WebSocketService();
 
   @override
   void initState() {
     super.initState();
     _loadUserData(); // Cargamos el nombre al iniciar
     _loadTopWorkshops();
+  }
+
+  @override
+  void dispose() {
+    _wsService.disconnect();
+    super.dispose();
   }
 
   Future<void> _loadTopWorkshops() async {
@@ -62,11 +71,70 @@ class _HomeScreenState extends State<HomeScreen> {
         setState(() {
           // 3. Extraemos el campo 'name' que configuramos en FastAPI
           userName = decodedToken['name'] ?? "Usuario";
+          
+          // Extraemos el ID del usuario (sub)
+          String? sub = decodedToken['sub']?.toString();
+          _userId = int.tryParse(sub ?? '');
         });
+
+        if (_userId != null) {
+          _initWebSocket();
+        }
       }
     } catch (e) {
       debugPrint("Error cargando token: $e");
     }
+  }
+
+  void _initWebSocket() {
+    _wsService.connectCliente(_userId!, (payload) {
+      if (mounted) {
+        // Si recibimos una actualización de estado de una emergencia
+        if (payload['type'] == 'STATUS_UPDATE') {
+          final data = payload['data'];
+          if (data['estado'] == 'atendiendo') {
+            _showInAppNotification(
+              title: "🚨 ¡Auxilio en Camino!",
+              message: "${data['nombre_taller']} ha aceptado tu solicitud.\n"
+                       "Distancia: ${data['distancia']} • Llegada: ${data['eta']}",
+            );
+          }
+        }
+      }
+    });
+  }
+
+  void _showInAppNotification({required String title, required String message}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            const SizedBox(height: 4),
+            Text(message),
+          ],
+        ),
+        backgroundColor: const Color(0xFFB91C1C),
+        duration: const Duration(seconds: 8),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        action: SnackBarAction(
+          label: "VER",
+          textColor: Colors.white,
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const MisEmergenciasScreen()),
+            );
+          },
+        ),
+      ),
+    );
   }
 
   @override
@@ -451,8 +519,8 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           ),
-          const EmergencyBubble(
-            idCliente: 1, // Esto lo deberías traer de tu login/estado
+          EmergencyBubble(
+            idCliente: _userId ?? 1, // Usamos el ID real si está disponible
             idVehiculoSeleccionado: 1, // El ID del carro actual
           ),
         ],

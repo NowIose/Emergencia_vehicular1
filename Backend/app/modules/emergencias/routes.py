@@ -4,7 +4,7 @@ from typing import List
 
 from app.core.database import get_db
 from app.api.auth import get_current_user
-from app.modules.usuarios.models import Usuario, UserRole, Cliente, PersonalTaller,CalificacionTaller
+from app.modules.usuarios.models import Usuario, UserRole, Cliente, PersonalTaller, CalificacionTaller, Taller
 from app.modules.emergencias import models, schemas
 from app.modules.vehiculos.models import Vehiculo
 from app.modules.emergencias.websockets import manager
@@ -12,9 +12,18 @@ from app.modules.bitacora.utils import registrar_evento
 
 from app.modules.emergencias.ai_service import analizar_emergencia_con_ia
 import asyncio
+import math
 
 router = APIRouter(prefix="/emergencias", tags=["emergencias"])
 
+def calculate_distance(lat1, lon1, lat2, lon2):
+    """Calcula la distancia en km entre dos puntos usando Haversine."""
+    R = 6371.0  # Radio de la Tierra en km
+    dlat = math.radians(lat2 - lat1)
+    dlon = math.radians(lon2 - lon1)
+    a = math.sin(dlat / 2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2)**2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    return R * c
 
 @router.post("/", response_model=schemas.EmergenciaResponse)
 async def create_emergencia(emergencia: schemas.EmergenciaCreate, fastapi_request: Request, db: Session = Depends(get_db), current_user: Usuario = Depends(get_current_user)):
@@ -168,7 +177,7 @@ async def aceptar_emergencia(fastapi_request: Request, nro: int, req: schemas.Ac
     if emergencia.estado != models.EstadoEmergencia.espera:
         raise HTTPException(status_code=400, detail="Emergencia ya no está en espera")
 
-    # --- NUEVO: Descubrir de qué taller es el usuario actual ---
+    # --- Descubrir de qué taller es el usuario actual ---
     taller_id = current_user.id
     if current_user.rol.value == "personal_taller":
         personal = db.query(PersonalTaller).filter(PersonalTaller.id == current_user.id).first()
@@ -177,19 +186,47 @@ async def aceptar_emergencia(fastapi_request: Request, nro: int, req: schemas.Ac
             
     # Asignamos la emergencia a este taller
     emergencia.id_taller = taller_id 
-    # -----------------------------------------------------------
-
     emergencia.id_personal = req.id_personal
     emergencia.estado = models.EstadoEmergencia.atendiendo
     
+    # --- NUEVO: Obtener datos del Taller para distancia y ETA ---
+    taller = db.query(Taller).filter(Taller.id == taller_id).first()
+    nombre_taller = taller.nombre_taller if taller else "un taller"
+    
+    distancia_km = 0.0
+    tiempo_estimado = "tiempo desconocido"
+    
+    if taller and taller.latitud and taller.longitud and emergencia.ubicacion_real:
+        try:
+            parts = emergencia.ubicacion_real.split(",")
+            if len(parts) == 2:
+                client_lat = float(parts[0].strip())
+                client_lon = float(parts[1].strip())
+                distancia_km = calculate_distance(taller.latitud, taller.longitud, client_lat, client_lon)
+                # Estimación simple: 2.5 min por km (tráfico) + 5 min base
+                minutos = int(distancia_km * 2.5 + 5)
+                tiempo_estimado = f"{minutos} min"
+        except Exception as e:
+            print(f"Error calculando distancia: {e}")
+
+    # Guardamos el tiempo estimado en DetalleEmergencia para persistencia
+    detalle = db.query(models.DetalleEmergencia).filter(models.DetalleEmergencia.nro_emergencia == nro).first()
+    if not detalle:
+        detalle = models.DetalleEmergencia(nro_emergencia=nro)
+        db.add(detalle)
+    detalle.tiempo_llegada_estimado = tiempo_estimado
+
     # --- MENSAJE AUTOMÁTICO ---
     personal_obj = db.query(PersonalTaller).filter(PersonalTaller.id == req.id_personal).first()
     nombre_mecanico = personal_obj.nombre_completo if personal_obj else "un mecánico"
     
+    msg_texto = f"¡Hola! Soy {nombre_mecanico} de {nombre_taller}. He aceptado tu solicitud. " \
+                f"Estoy a {distancia_km:.1f} km de distancia y tardaré aproximadamente {tiempo_estimado} en llegar."
+    
     mensaje_auto = models.Mensajeria(
         nro_emergencia=nro,
         id_remitente=taller_id,
-        mensaje=f"¡Hola! Soy {nombre_mecanico}. He aceptado tu solicitud y voy en camino a ayudarte."
+        mensaje=msg_texto
     )
     db.add(mensaje_auto)
     # ---------------------------
@@ -198,16 +235,31 @@ async def aceptar_emergencia(fastapi_request: Request, nro: int, req: schemas.Ac
     db.refresh(emergencia)
 
     # Registrar en bitácora
-    registrar_evento(db, fastapi_request, "Emergencia Aceptada", f"Taller ID {taller_id} aceptó la emergencia Nro {nro}. Mecánico asignado: {nombre_mecanico}", usuario=current_user, id_taller=taller_id)
+    registrar_evento(db, fastapi_request, "Emergencia Aceptada", f"Taller {nombre_taller} aceptó la emergencia Nro {nro}. Mecánico asignado: {nombre_mecanico}", usuario=current_user, id_taller=taller_id)
 
     # Notificar al cliente
     vehiculo = db.query(Vehiculo).filter(Vehiculo.id == emergencia.id_vehiculo).first()
     if vehiculo:
+        # 1. Notificación de cambio de estado con info extra
         await manager.send_to_client(vehiculo.cliente_id, {
             "type": "STATUS_UPDATE",
             "data": {
                 "nro": emergencia.nro,
-                "estado": "atendiendo"
+                "estado": "atendiendo",
+                "nombre_taller": nombre_taller,
+                "distancia": f"{distancia_km:.1f} km",
+                "eta": tiempo_estimado
+            }
+        })
+        # 2. Notificación de nuevo mensaje (el mensaje automático) para que aparezca en el chat
+        await manager.send_to_client(vehiculo.cliente_id, {
+            "type": "NEW_MESSAGE",
+            "data": {
+                "nro_emergencia": nro,
+                "id_remitente": taller_id,
+                "mensaje": msg_texto,
+                "id_taller": taller_id,
+                "id_personal": req.id_personal
             }
         })
 

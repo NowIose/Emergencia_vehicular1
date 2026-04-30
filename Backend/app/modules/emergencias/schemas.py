@@ -8,8 +8,14 @@ class EmergenciaCreate(BaseModel):
     id_vehiculo: int
     ubicacion_real: str
     descripcion: str
-    prioridad: str = "alta" # Opcional
+    prioridad: str  # Opcional
     fotos: Optional[List[str]] = None
+
+class DetalleEmergenciaResponse(BaseModel):
+    tiempo_llegada_estimado: Optional[str] = None
+    ubicacion_personal_real: Optional[str] = None
+    class Config:
+        from_attributes = True
 
 class EmergenciaResponse(BaseModel):
     nro: int
@@ -22,8 +28,10 @@ class EmergenciaResponse(BaseModel):
     fecha_creacion: datetime
     id_vehiculo: int
     id_taller: Optional[int] = None
+    nombre_taller: Optional[str] = None
     id_personal: Optional[int] = None
     vehiculo: Optional[VehiculoResponse] = None
+    detalles: Optional[DetalleEmergenciaResponse] = None
 
     class Config:
         from_attributes = True

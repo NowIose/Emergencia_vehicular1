@@ -22,8 +22,8 @@ async def analizar_emergencia_con_ia(descripcion: str, fotos_urls: List[str] | N
     prompt_sistema = """
     Eres un mecánico experto evaluando reportes de emergencias vehiculares. 
     Analiza la descripción del conductor y la imagen (si la hay).
-    1. Redacta un 'Diagnóstico Preliminar' técnico y muy breve para el taller. NO uses emojis.
-    2. Al final, clasifica la prioridad estrictamente como: 'alta', 'media' o 'baja'.
+    1. Redacta un 'Diagnóstico Preliminar' técnico y muy breve para el taller. NO uses emojis no exageres con el diagnóstico.
+    2. Al final, clasifica la prioridad estrictamente como: 'media', 'alta' o 'baja'.
     """
 
     try:

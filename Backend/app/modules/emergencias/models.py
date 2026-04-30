@@ -51,6 +51,12 @@ class Emergencia(Base):
         foreign_keys=[id_taller]
     )
     
+    @property
+    def nombre_taller(self):
+        if self.taller and hasattr(self.taller, 'nombre_taller'):
+            return self.taller.nombre_taller
+        return None
+
     detalles = relationship("DetalleEmergencia", back_populates="emergencia", uselist=False)
 # 3. Seguimiento en Tiempo Real (Geolocalización dinámica)
 class DetalleEmergencia(Base):

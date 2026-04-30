@@ -244,11 +244,26 @@ class _EmergenciaDetailScreenState extends State<EmergenciaDetailScreen> {
               'ID Vehículo',
               widget.emergencia['id_vehiculo']?.toString() ?? 'N/A',
             ),
-            if (widget.emergencia['id_taller'] != null)
+            if (widget.emergencia['nombre_taller'] != null)
+              _buildInfoRow(
+                Icons.home_repair_service,
+                'Taller Asignado',
+                widget.emergencia['nombre_taller'].toString(),
+              )
+            else if (widget.emergencia['id_taller'] != null)
               _buildInfoRow(
                 Icons.build,
                 'ID Taller Asignado',
                 widget.emergencia['id_taller'].toString(),
+              ),
+              
+            if (widget.emergencia['detalles'] != null && 
+                widget.emergencia['detalles']['tiempo_llegada_estimado'] != null)
+              _buildInfoRow(
+                Icons.access_time,
+                'Tiempo Estimado de Llegada',
+                widget.emergencia['detalles']['tiempo_llegada_estimado'].toString(),
+                color: Colors.blue,
               ),
 
             const SizedBox(height: 30),

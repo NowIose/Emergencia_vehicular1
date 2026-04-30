@@ -5,7 +5,7 @@ import '../../features/auth/domian/user_model.dart';
 
 class AuthService {
   // 1. Asegúrate de que API_URL en el .env NO tenga "/api/v1" al final
-  final String _baseUrl = dotenv.env['API_URL'] ?? 'http://192.168.1.3:8000';
+  final String _baseUrl = dotenv.env['API_URL'] ?? 'http://192.168.1.14:8000';
 
   Future<bool> registerUser(RegisterRequest data) async {
     try {

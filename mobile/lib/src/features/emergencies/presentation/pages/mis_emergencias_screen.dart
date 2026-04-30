@@ -499,9 +499,11 @@ class _MisEmergenciasScreenState extends State<MisEmergenciasScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              emer['id_taller'] != null
-                                  ? 'TALLER ASIGNADO #${emer['id_taller']}'
-                                  : 'TALLER ASIGNADO',
+                              emer['nombre_taller'] != null
+                                  ? 'TALLER: ${emer['nombre_taller']}'.toUpperCase()
+                                  : (emer['id_taller'] != null
+                                      ? 'TALLER ASIGNADO #${emer['id_taller']}'
+                                      : 'TALLER ASIGNADO'),
                               style: TextStyle(
                                 color: Colors.blue[600],
                                 fontWeight: FontWeight.bold,
@@ -510,6 +512,20 @@ class _MisEmergenciasScreenState extends State<MisEmergenciasScreen> {
                                 letterSpacing: 1.2,
                               ),
                             ),
+                            if (emer['detalles'] != null && 
+                                emer['detalles']['tiempo_llegada_estimado'] != null)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 2.0),
+                                child: Text(
+                                  'LLEGADA EN: ${emer['detalles']['tiempo_llegada_estimado']}'.toUpperCase(),
+                                  style: TextStyle(
+                                    color: Colors.blue[800],
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 10,
+                                    fontFamily: 'Manrope',
+                                  ),
+                                ),
+                              ),
                             const SizedBox(height: 4),
                             Text(
                               emer['descripcion'] ?? 'Falla reportada',

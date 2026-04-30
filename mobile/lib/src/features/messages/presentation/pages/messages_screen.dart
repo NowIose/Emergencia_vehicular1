@@ -124,10 +124,15 @@ class _MessagesScreenState extends State<MessagesScreen> {
                           final e = _emergencias[index];
                           // Solo permitimos chat si la emergencia ha sido aceptada por un taller
                           final bool tieneTaller = e['id_personal'] != null;
+                          
+                          String displayTitle = 'Esperando Taller...';
+                          if (tieneTaller) {
+                            displayTitle = e['nombre_taller'] ?? 'Taller Asignado';
+                          }
 
                           return _buildChatItem(
                             nro: e['nro'],
-                            name: tieneTaller ? 'Taller Asignado' : 'Esperando Taller...',
+                            name: displayTitle,
                             message: e['descripcion'],
                             status: e['estado'],
                             isClickable: tieneTaller,
