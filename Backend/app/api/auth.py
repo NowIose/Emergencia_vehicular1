@@ -46,7 +46,7 @@ def register_taller(obj_in: TallerCreate, db: Session = Depends(get_db)):
 def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="No autorizado - token inválido",
+        detail="No autorizado - token inválido -POSIBLE USUARIO NO EXISTENTE",
         headers={"WWW-Authenticate": "Bearer"},
     )
     

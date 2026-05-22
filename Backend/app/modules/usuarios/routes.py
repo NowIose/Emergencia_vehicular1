@@ -361,3 +361,6 @@ async def delete_image_view(request: DeleteImageRequest):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="No se pudo eliminar la imagen del servidor"
         )
+    
+
+    #GG PRUEBA DE PUSH
