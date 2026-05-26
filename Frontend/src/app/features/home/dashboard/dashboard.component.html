@@ -23,7 +23,9 @@
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div *ngFor="let taller of listaTalleres()" class="bg-white rounded-[2.5rem] overflow-hidden shadow-sm border border-slate-100 hover:shadow-md transition-all hover:-translate-y-1 group">
+        <div *ngFor="let taller of listaTalleres()" 
+             (click)="abrirDetalleTaller(taller)"
+             class="bg-white rounded-[2.5rem] overflow-hidden shadow-sm border border-slate-100 hover:shadow-md transition-all hover:-translate-y-1 group cursor-pointer">
           <div class="h-48 bg-slate-100 relative overflow-hidden">
             <img *ngIf="taller.foto_perfil" [src]="taller.foto_perfil" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
             <div *ngIf="!taller.foto_perfil" class="w-full h-full flex items-center justify-center text-slate-300">
@@ -404,5 +406,99 @@
         Confirmar Asignación
       </button>
     </div>
+  </div>
+</div>
+
+<!-- Modal Detalle Taller (Para Admin) -->
+<div *ngIf="mostrarModalTaller()" class="fixed inset-0 z-[100] flex items-center justify-center p-4">
+  <div class="absolute inset-0 bg-secondary/80 backdrop-blur-md transition-opacity" (click)="cerrarModalTaller()"></div>
+  <div class="bg-white rounded-[2.5rem] w-full max-w-4xl overflow-hidden shadow-2xl relative z-10 animate-in fade-in zoom-in duration-300 flex flex-col md:flex-row max-h-[90vh]">
+    
+    <!-- Lado Izquierdo: Mapa e Imagen -->
+    <div class="md:w-1/2 bg-slate-50 p-8 border-r border-slate-100 flex flex-col overflow-y-auto">
+      <div class="flex justify-between items-start mb-6">
+        <div>
+          <h3 class="text-2xl font-black text-slate-800 italic">{{ tallerSeleccionado()?.nombre_taller }}</h3>
+          <p class="text-[10px] font-black text-primary uppercase tracking-widest">Taller Aliado Verificado</p>
+        </div>
+      </div>
+
+      <!-- Contenedor del Mapa -->
+      <div id="mapa-taller" class="w-full h-64 bg-slate-200 rounded-[2rem] overflow-hidden mb-6 border-4 border-white shadow-sm z-0"></div>
+
+      <div class="space-y-4">
+        <div class="flex items-center gap-3 p-4 bg-white rounded-2xl border border-slate-100 shadow-sm">
+          <div class="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
+            <span class="material-symbols-outlined">location_on</span>
+          </div>
+          <div>
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ubicación Exacta</p>
+            <p class="text-sm font-bold text-slate-700">{{ tallerSeleccionado()?.direccion }}, {{ tallerSeleccionado()?.ciudad }}</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div class="p-4 bg-white rounded-2xl border border-slate-100 shadow-sm">
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">NIT</p>
+            <p class="text-sm font-bold text-primary">{{ tallerSeleccionado()?.nit || '---' }}</p>
+          </div>
+          <div class="p-4 bg-white rounded-2xl border border-slate-100 shadow-sm">
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Teléfono</p>
+            <p class="text-sm font-bold text-slate-700">{{ tallerSeleccionado()?.telefono || '---' }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lado Derecho: Información Adicional -->
+    <div class="md:w-1/2 p-8 flex flex-col overflow-y-auto">
+      <div class="flex justify-end mb-4">
+        <button (click)="cerrarModalTaller()" class="text-slate-400 hover:text-red-500 transition-colors bg-slate-100 hover:bg-red-50 p-2 rounded-full">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <div class="flex-grow space-y-8">
+        <div class="text-center">
+          <div class="w-32 h-32 mx-auto rounded-[2.5rem] bg-slate-100 overflow-hidden border-4 border-white shadow-xl mb-4">
+            <img *ngIf="tallerSeleccionado()?.foto_perfil" [src]="tallerSeleccionado()?.foto_perfil" class="w-full h-full object-cover">
+            <div *ngIf="!tallerSeleccionado()?.foto_perfil" class="w-full h-full flex items-center justify-center text-slate-300">
+              <span class="material-symbols-outlined text-5xl">storefront</span>
+            </div>
+          </div>
+          <h4 class="text-xl font-black text-slate-800">{{ tallerSeleccionado()?.nombre_taller }}</h4>
+          <p class="text-sm font-medium text-slate-400 italic">"Comprometidos con la seguridad vial"</p>
+        </div>
+
+        <div class="space-y-4">
+          <h5 class="text-xs font-black text-slate-800 uppercase tracking-widest border-b border-slate-100 pb-2">Datos de Contacto</h5>
+          <div class="space-y-3">
+            <div class="flex items-center gap-3">
+              <span class="material-symbols-outlined text-slate-400">mail</span>
+              <span class="text-sm font-medium text-slate-600">{{ tallerSeleccionado()?.email }}</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="material-symbols-outlined text-slate-400">phone_iphone</span>
+              <span class="text-sm font-medium text-slate-600">{{ tallerSeleccionado()?.telefono || 'Sin celular registrado' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-primary/5 p-6 rounded-[2rem] border border-primary/10">
+          <h5 class="text-xs font-black text-primary uppercase tracking-widest mb-3 flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm">info</span>
+            Resumen Operativo
+          </h5>
+          <p class="text-sm text-slate-600 leading-relaxed font-medium">
+            Este taller forma parte de nuestra red de confianza. Cuenta con geolocalización activa para asignaciones rápidas y atención personalizada a clientes Kinetic Trust.
+          </p>
+        </div>
+      </div>
+
+      <button (click)="cerrarModalTaller()" class="w-full bg-slate-800 text-white py-4 rounded-2xl font-black uppercase tracking-widest mt-8 hover:bg-slate-900 transition-all shadow-lg">
+        Cerrar Detalle
+      </button>
+    </div>
+
   </div>
 </div>

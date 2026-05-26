@@ -113,6 +113,8 @@ class TallerResponse(BaseModel):
     id: int
     email: EmailStr
     nombre_taller: str
+    telefono: Optional[str] = None
+    nit: Optional[str] = None
     ciudad: str
     direccion: str
     foto_perfil: Optional[str] = None

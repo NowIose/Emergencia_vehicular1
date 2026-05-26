@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnInit, signal, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
@@ -7,6 +7,7 @@ import { MediaService } from '../../../core/services/media.service';
 import { EmergenciaWsService, EmergenciaNotificacion } from '../../../core/services/emergencia/emergencia-ws.service';
 import { PersonalTaller } from '../../../core/models/personal.model';
 import { environment } from 'src/environments/environment';
+import * as L from 'leaflet';
 
 @Component({
   selector: 'app-dashboard',
@@ -33,6 +34,11 @@ export class DashboardComponent implements OnInit {
   distanciaCalculada = signal<string | null>(null);
   diagnosticoAnimado = signal<string>('');
   typingInProgress = signal<boolean>(false);
+
+  // --- NUEVOS SEÑALES PARA TALLERES ---
+  mostrarModalTaller = signal<boolean>(false);
+  tallerSeleccionado = signal<any | null>(null);
+  private mapTaller: L.Map | null = null;
   
   tallerLat: number = 0;
   tallerLon: number = 0;
@@ -83,6 +89,56 @@ export class DashboardComponent implements OnInit {
       next: (data) => this.listaTalleres.set(data),
       error: (err) => console.error('Error al cargar talleres:', err)
     });
+  }
+
+  abrirDetalleTaller(taller: any) {
+    this.tallerSeleccionado.set(taller);
+    this.mostrarModalTaller.set(true);
+    
+    // Esperar a que el modal se renderice para inicializar el mapa
+    setTimeout(() => {
+      this.initMapaTaller(taller.latitud, taller.longitud, taller.nombre_taller);
+    }, 100);
+  }
+
+  cerrarModalTaller() {
+    this.mostrarModalTaller.set(false);
+    this.tallerSeleccionado.set(null);
+    if (this.mapTaller) {
+      this.mapTaller.remove();
+      this.mapTaller = null;
+    }
+  }
+
+  private initMapaTaller(lat: number, lng: number, nombre: string) {
+    if (this.mapTaller) {
+      this.mapTaller.remove();
+    }
+
+    const defaultLat = lat || -17.7833;
+    const defaultLng = lng || -63.1821;
+
+    // Configuración de iconos de Leaflet (para que no salgan rotos)
+    const customIcon = L.icon({
+      iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+      iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+      shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowSize: [41, 41]
+    });
+
+    this.mapTaller = L.map('mapa-taller').setView([defaultLat, defaultLng], 15);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(this.mapTaller);
+
+    L.marker([defaultLat, defaultLng], { icon: customIcon })
+      .addTo(this.mapTaller)
+      .bindPopup(`<b>${nombre}</b>`)
+      .openPopup();
   }
 
   cargarReviews() {
