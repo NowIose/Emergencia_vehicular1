@@ -1,6 +1,15 @@
 from pydantic import EmailStr, BaseModel
 from typing import Optional
 
+# Nuevo esquema para responder datos de la especialidad
+class EspecialidadResponse(BaseModel):
+    id: int
+    nombre: str
+    descripcion: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+        
 class TallerCreate(BaseModel):
     # Datos de la tabla Usuario
     email: EmailStr
@@ -19,7 +28,8 @@ class TallerCreate(BaseModel):
     latitud: Optional[float] = 0.0
     longitud: Optional[float] = 0.0
     foto_perfil: Optional[str] 
-
+    # RECIBIR LOS IDS DESDE EL FRONTEND (Ej: [1, 3])
+    especialidades_ids: Optional[list[int]] = []
     class Config:
         from_attributes = True
 
@@ -119,6 +129,9 @@ class TallerResponse(BaseModel):
     latitud: Optional[float] = 0.0
     longitud: Optional[float] = 0.0
     
+    # ENVIAR LAS ESPECIALIDADES AL FRONTEND
+    especialidades: list[EspecialidadResponse] = []
+
     class Config:
         from_attributes = True
 

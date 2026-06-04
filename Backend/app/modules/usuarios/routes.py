@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 
 from app.core.database import get_db
-from .models import Taller, UserRole, Cliente, CalificacionTaller
+from .models import Taller, UserRole, Cliente, CalificacionTaller, Especialidad
 from .schemas import TallerCreate, ClienteCreate
 from app.modules.bitacora.utils import registrar_evento
 
@@ -361,3 +361,42 @@ async def delete_image_view(request: DeleteImageRequest):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="No se pudo eliminar la imagen del servidor"
         )
+    
+    # --- ENDPOINTS PARA ESPECIALIDADES DEL TALLER ---
+
+@router.get("/especialidades/todas", response_model=List[EspecialidadResponse])
+def obtener_todas_las_especialidades(db: Session = Depends(get_db)):
+    """
+    Retorna la lista de todas las especialidades del sistema para que el taller elija.
+    """
+    return db.query(Especialidad).all()
+
+
+@router.put("/taller/mis-especialidades", status_code=status.HTTP_200_OK)
+def actualizar_especialidades_taller(
+    especialidades_ids: List[int], 
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user)
+):
+    """
+    Actualiza las especialidades que ofrece el taller autenticado.
+    """
+    if current_user.rol != UserRole.ADMIN_TALLER:
+        raise HTTPException(
+            status_code=403, 
+            detail="Solo los administradores de taller pueden configurar sus especialidades"
+        )
+    
+    # 1. Buscar el perfil específico del taller usando el ID del usuario actual
+    taller = db.query(Taller).filter(Taller.id == current_user.id).first()
+    if not taller:
+        raise HTTPException(status_code=404, detail="Perfil de taller no encontrado")
+    
+    # 2. Buscar las entidades de especialidad que coincidan con los IDs enviados
+    especialidades_elegidas = db.query(Especialidad).filter(Especialidad.id.in_(especialidades_ids)).all()
+    
+    # 3. Reemplazar la relación muchos a muchos de SQLAlchemy
+    taller.especialidades = especialidades_elegidas
+    
+    db.commit()
+    return {"message": "Especialidades del taller actualizadas con éxito"}

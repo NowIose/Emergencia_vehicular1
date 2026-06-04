@@ -1,19 +1,23 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpErrorResponse } from '@angular/common/http';
 import { PersonalService } from '../../../core/services/personal/personal.service';
 import { MediaService } from '../../../core/services/media.service';
-import { EmergenciaWsService, EmergenciaNotificacion } from '../../../core/services/emergencia/emergencia-ws.service';
+import {
+  EmergenciaWsService,
+  EmergenciaNotificacion,
+} from '../../../core/services/emergencia/emergencia-ws.service';
 import { PersonalTaller } from '../../../core/models/personal.model';
 import { environment } from 'src/environments/environment';
+import { fromEvent, Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './dashboard.component.html',
-  styleUrls: ['../home.component.css']
+  styleUrls: ['../home.component.css'],
 })
 export class DashboardComponent implements OnInit {
   private personalService = inject(PersonalService);
@@ -26,14 +30,14 @@ export class DashboardComponent implements OnInit {
   listaPersonal = signal<PersonalTaller[]>([]);
   listaTalleres = signal<any[]>([]);
   emergenciasPendientes = signal<EmergenciaNotificacion['data'][]>([]);
-  
+
   mostrarModalDetalle = signal<boolean>(false);
   emergenciaSeleccionada = signal<any | null>(null);
   personalSeleccionadoId = signal<number | null>(null);
   distanciaCalculada = signal<string | null>(null);
   diagnosticoAnimado = signal<string>('');
   typingInProgress = signal<boolean>(false);
-  
+
   tallerLat: number = 0;
   tallerLon: number = 0;
   serviciosPendientes: number = 0;
@@ -47,6 +51,8 @@ export class DashboardComponent implements OnInit {
   subiendoFoto = signal<boolean>(false);
   private typingInterval: any;
 
+  // Suscripción para detectar reconexión de red
+  private onlineSubscription!: Subscription;
   constructor() {
     this.personalForm = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
@@ -60,7 +66,7 @@ export class DashboardComponent implements OnInit {
 
   ngOnInit() {
     this.cargarDatosPerfil();
-    
+
     if (this.userRole() === 'admin_sistema') {
       this.cargarTalleres();
     } else {
@@ -75,13 +81,21 @@ export class DashboardComponent implements OnInit {
           this.serviciosPendientes = this.emergenciasPendientes().length;
         }
       });
+      // ESCUCHAR CUANDO VUELVA EL WIFI / RED
+      this.onlineSubscription = fromEvent(window, 'online').subscribe(() => {
+        this.procesarColaPendiente();
+      });
     }
+  }
+  ngOnDestroy() {
+    if (this.typingInterval) clearInterval(this.typingInterval);
+    if (this.onlineSubscription) this.onlineSubscription.unsubscribe();
   }
 
   cargarTalleres() {
     this.http.get<any[]>(`${environment.apiUrl}/usuarios/lista-talleres`).subscribe({
       next: (data) => this.listaTalleres.set(data),
-      error: (err) => console.error('Error al cargar talleres:', err)
+      error: (err) => console.error('Error al cargar talleres:', err),
     });
   }
 
@@ -90,7 +104,7 @@ export class DashboardComponent implements OnInit {
     const headers = new HttpHeaders({ Authorization: `Bearer ${token}` });
     this.http.get<any[]>(`${environment.apiUrl}/usuarios/taller/reviews`, { headers }).subscribe({
       next: (data) => this.listaReviews.set(data),
-      error: (err) => console.error('Error al cargar reseñas:', err)
+      error: (err) => console.error('Error al cargar reseñas:', err),
     });
   }
 
@@ -102,7 +116,7 @@ export class DashboardComponent implements OnInit {
         this.promedioCalificacion.set(data.promedio);
         this.totalVotos.set(data.total);
       },
-      error: (err) => console.error('Error al cargar stats:', err)
+      error: (err) => console.error('Error al cargar stats:', err),
     });
   }
 
@@ -110,19 +124,21 @@ export class DashboardComponent implements OnInit {
     this.http.get<any[]>(`${environment.apiUrl}/emergencias/espera`).subscribe({
       next: (data) => {
         // Mapear los datos del backend al formato que espera el frontend (data del WS)
-        const mapeadas = data.map(e => ({
+        const mapeadas = data.map((e) => ({
           nro: e.nro,
           ubicacion_real: e.ubicacion_real,
           descripcion: e.descripcion,
           fotos: e.fotos,
-          vehiculo: e.vehiculo ? `${e.vehiculo.marca} ${e.vehiculo.modelo} (${e.vehiculo.placa})` : 'Vehículo desconocido',
+          vehiculo: e.vehiculo
+            ? `${e.vehiculo.marca} ${e.vehiculo.modelo} (${e.vehiculo.placa})`
+            : 'Vehículo desconocido',
           diagnostico_ia: e.diagnostico_ia,
-          prioridad: e.prioridad
+          prioridad: e.prioridad,
         }));
         this.emergenciasPendientes.set(mapeadas);
         this.serviciosPendientes = mapeadas.length;
       },
-      error: (err) => console.error('Error al cargar emergencias en espera:', err)
+      error: (err) => console.error('Error al cargar emergencias en espera:', err),
     });
   }
 
@@ -181,7 +197,9 @@ export class DashboardComponent implements OnInit {
     }
   }
 
-  abrirModal() { this.mostrarModal.set(true); }
+  abrirModal() {
+    this.mostrarModal.set(true);
+  }
   cerrarModal() {
     this.mostrarModal.set(false);
     this.personalForm.reset({ cargo: 'Mecánico' });
@@ -230,7 +248,7 @@ export class DashboardComponent implements OnInit {
     let index = 0;
     this.typingInterval = setInterval(() => {
       if (index < text.length) {
-        this.diagnosticoAnimado.update(current => current + text[index]);
+        this.diagnosticoAnimado.update((current) => current + text[index]);
         index++;
       } else {
         clearInterval(this.typingInterval);
@@ -243,37 +261,143 @@ export class DashboardComponent implements OnInit {
     this.personalSeleccionadoId.set(Number(event.target.value));
   }
 
+  // ==========================================
+  // LÓGICA DE ASIGNACIÓN CON SOPORTE OFFLINE
+  // ==========================================
+
   aceptarEmergencia() {
     const emergencia = this.emergenciaSeleccionada();
     const idPersonal = this.personalSeleccionadoId();
     if (!emergencia || !idPersonal) return;
 
+    const datosAsignacion = {
+      nro: emergencia.nro,
+      id_personal: idPersonal,
+    };
+
+    if (navigator.onLine) {
+      // Caso con Internet: Envío inmediato
+      this.enviarAlBackend(datosAsignacion);
+    } else {
+      // Caso sin Internet: Guardar en cola local
+      this.guardarEnColaOffline(datosAsignacion);
+    }
+  }
+
+  private enviarAlBackend(datos: { nro: number; id_personal: number }) {
     const token = localStorage.getItem('access_token');
     const headers = new HttpHeaders({ Authorization: `Bearer ${token}` });
 
-    this.http.post(`${environment.apiUrl}/emergencias/${emergencia.nro}/aceptar`, 
-      { id_personal: idPersonal }, { headers }).subscribe({
+    this.http
+      .post(
+        `${environment.apiUrl}/emergencias/${datos.nro}/aceptar`,
+        { id_personal: datos.id_personal },
+        { headers },
+      )
+      .subscribe({
         next: () => {
           alert('¡Emergencia Aceptada y Asignada!');
-          this.emergenciasPendientes.update((emergencias) =>
-            emergencias.filter((e) => e.nro !== emergencia.nro));
-          this.serviciosPendientes = this.emergenciasPendientes().length;
+          this.removerEmergenciaDeUI(datos.nro);
           this.cerrarDetalleEmergencia();
         },
-        error: () => alert('Error al aceptar la emergencia'),
+        error: (err: HttpErrorResponse) => {
+          // Captura el conflicto si el backend retorna HTTP 409 o un detail específico
+          if (
+            err.status === 409 ||
+            err.error?.detail === 'ya_asignada' ||
+            err.error?.detail?.includes('seleccionada')
+          ) {
+            alert('Ya fue seleccionada por otro taller.');
+            this.removerEmergenciaDeUI(datos.nro);
+          } else {
+            alert('Error al aceptar la emergencia');
+          }
+          this.cerrarDetalleEmergencia();
+        },
       });
   }
+
+  private guardarEnColaOffline(datos: { nro: number; id_personal: number }) {
+    const cola = JSON.parse(localStorage.getItem('cola_emergencias_offline') || '[]');
+
+    const existe = cola.some((item: any) => item.nro === datos.nro);
+    if (!existe) {
+      cola.push(datos);
+      localStorage.setItem('cola_emergencias_offline', JSON.stringify(cola));
+    }
+
+    alert('Sin conexión. El auxilio se aceptará automáticamente en cuanto vuelva el WiFi.');
+
+    // Modo optimista: Quitamos el auxilio de la pantalla para simular que inició
+    this.removerEmergenciaDeUI(datos.nro);
+    this.cerrarDetalleEmergencia();
+  }
+
+  private procesarColaPendiente() {
+    let cola = JSON.parse(localStorage.getItem('cola_emergencias_offline') || '[]');
+    if (cola.length === 0) return;
+
+    const token = localStorage.getItem('access_token');
+    const headers = new HttpHeaders({ Authorization: `Bearer ${token}` });
+
+    cola.forEach((datos: any) => {
+      this.http
+        .post(
+          `${environment.apiUrl}/emergencias/${datos.nro}/aceptar`,
+          { id_personal: datos.id_personal },
+          { headers },
+        )
+        .subscribe({
+          next: () => {
+            alert(`¡Se recuperó el internet! Petición Nro ${datos.nro} procesada con éxito.`);
+            this.removerDeColaOffline(datos.nro);
+          },
+          error: (err: HttpErrorResponse) => {
+            this.removerDeColaOffline(datos.nro);
+            if (
+              err.status === 409 ||
+              err.error?.detail === 'ya_asignada' ||
+              err.error?.detail?.includes('seleccionada')
+            ) {
+              alert(
+                `La emergencia Nro ${datos.nro} ya fue seleccionada por otro taller mientras estabas desconectado.`,
+              );
+            }
+          },
+        });
+    });
+  }
+
+  private removerEmergenciaDeUI(nro: number) {
+    this.emergenciasPendientes.update((emergencias) => emergencias.filter((e) => e.nro !== nro));
+    this.serviciosPendientes = this.emergenciasPendientes().length;
+  }
+
+  private removerDeColaOffline(nro: number) {
+    let cola = JSON.parse(localStorage.getItem('cola_emergencias_offline') || '[]');
+    cola = cola.filter((item: any) => item.nro !== nro);
+    localStorage.setItem('cola_emergencias_offline', JSON.stringify(cola));
+  }
+
+  // ==========================================
 
   private calcularDistancia(lat1: number, lon1: number, lat2: number, lon2: number): number {
     const R = 6371;
     const dLat = this.deg2rad(lat2 - lat1);
     const dLon = this.deg2rad(lon2 - lon1);
-    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(this.deg2rad(lat1)) * Math.cos(this.deg2rad(lat2)) *
-      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(this.deg2rad(lat1)) *
+        Math.cos(this.deg2rad(lat2)) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   }
 
-  private deg2rad(deg: number): number { return deg * (Math.PI / 180); }
-  verFotoGrande(url: string) { if (url) window.open(url, '_blank'); }
+  private deg2rad(deg: number): number {
+    return deg * (Math.PI / 180);
+  }
+  verFotoGrande(url: string) {
+    if (url) window.open(url, '_blank');
+  }
 }
