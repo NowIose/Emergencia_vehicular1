@@ -73,3 +73,5 @@ Auditoría del sistema.
 *   **Endpoints (`routes.py`)**:
     *   `GET /bitacora/`: Listar registros de auditoría.
 *   **Utilidades (`utils.py`)**: Funciones para inserción automática en auditoría.
+
+gogogo
