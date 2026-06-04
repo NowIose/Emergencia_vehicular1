@@ -1,16 +1,19 @@
 <div class="p-4 md:p-8 max-w-7xl mx-auto">
-  
   <!-- DASHBOARD ADMIN SISTEMA -->
   <ng-container *ngIf="userRole() === 'admin_sistema'; else tallerDashboard">
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-      <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
+      <div
+        class="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 hover:shadow-md transition-shadow"
+      >
         <p class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Total Talleres</p>
         <div class="flex items-end gap-2">
           <p class="text-4xl font-black text-primary">{{ listaTalleres().length }}</p>
           <span class="text-green-500 text-xs font-bold mb-1">Activos</span>
         </div>
       </div>
-      <div class="bg-primary p-6 rounded-[2rem] shadow-lg shadow-primary/20 text-white flex flex-col justify-center">
+      <div
+        class="bg-primary p-6 rounded-[2rem] shadow-lg shadow-primary/20 text-white flex flex-col justify-center"
+      >
         <p class="text-white/70 text-xs font-bold uppercase tracking-wider">Panel Admin</p>
         <p class="text-xl font-bold italic">Control Total</p>
       </div>
@@ -23,15 +26,27 @@
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div *ngFor="let taller of listaTalleres()" 
+        <div
+          *ngFor="let taller of listaTalleres()"
+          
              (click)="abrirDetalleTaller(taller)"
-             class="bg-white rounded-[2.5rem] overflow-hidden shadow-sm border border-slate-100 hover:shadow-md transition-all hover:-translate-y-1 group cursor-pointer">
+             class="bg-white rounded-[2.5rem] overflow-hidden shadow-sm border border-slate-100 hover:shadow-md transition-all hover:-translate-y-1 group cursor-pointer"
+        >
           <div class="h-48 bg-slate-100 relative overflow-hidden">
-            <img *ngIf="taller.foto_perfil" [src]="taller.foto_perfil" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
-            <div *ngIf="!taller.foto_perfil" class="w-full h-full flex items-center justify-center text-slate-300">
+            <img
+              *ngIf="taller.foto_perfil"
+              [src]="taller.foto_perfil"
+              class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+            />
+            <div
+              *ngIf="!taller.foto_perfil"
+              class="w-full h-full flex items-center justify-center text-slate-300"
+            >
               <span class="material-symbols-outlined text-6xl">storefront</span>
             </div>
-            <div class="absolute bottom-4 left-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-[10px] font-black uppercase text-primary shadow-sm">
+            <div
+              class="absolute bottom-4 left-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-[10px] font-black uppercase text-primary shadow-sm"
+            >
               {{ taller.ciudad || 'Ciudad' }}
             </div>
           </div>
@@ -41,13 +56,18 @@
               <span class="material-symbols-outlined text-sm">location_on</span>
               <p class="text-xs font-medium truncate">{{ taller.direccion || 'Sin dirección' }}</p>
             </div>
-            
+
             <div class="flex items-center justify-between pt-4 border-t border-slate-50">
               <div class="flex items-center gap-2">
                 <span class="material-symbols-outlined text-slate-400 text-sm">call</span>
-                <span class="text-xs font-bold text-slate-600">{{ taller.telefono || 'Sin tel.' }}</span>
+                <span class="text-xs font-bold text-slate-600">{{
+                  taller.telefono || 'Sin tel.'
+                }}</span>
               </div>
-              <span class="bg-primary/10 text-primary text-[9px] font-black uppercase px-2 py-1 rounded-lg">NIT: {{ taller.nit || '---' }}</span>
+              <span
+                class="bg-primary/10 text-primary text-[9px] font-black uppercase px-2 py-1 rounded-lg"
+                >NIT: {{ taller.nit || '---' }}</span
+              >
             </div>
           </div>
         </div>
@@ -62,9 +82,7 @@
       <div
         class="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 hover:shadow-md transition-shadow"
       >
-        <p class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">
-          Servicios Hoy
-        </p>
+        <p class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Servicios Hoy</p>
         <div class="flex items-end gap-2">
           <p class="text-4xl font-black text-primary">{{ serviciosPendientes }}</p>
           <span class="text-green-500 text-xs font-bold mb-1">+2 hoy</span>
@@ -78,8 +96,12 @@
       </div>
       <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100">
         <p class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Calificación</p>
-        <p class="text-4xl font-black text-yellow-500">{{ promedioCalificacion() }} <span class="text-xl">★</span></p>
-        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">{{ totalVotos() }} votos</p>
+        <p class="text-4xl font-black text-yellow-500">
+          {{ promedioCalificacion() }} <span class="text-xl">★</span>
+        </p>
+        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">
+          {{ totalVotos() }} votos
+        </p>
       </div>
       <div
         class="bg-primary p-6 rounded-[2rem] shadow-lg shadow-primary/20 text-white flex flex-col justify-center"
@@ -92,17 +114,29 @@
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
       <div class="lg:col-span-2 space-y-8">
         <section>
-          <div class="flex justify-between items-center mb-6 px-2">
+          <div
+            class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 px-2"
+          >
             <h3 class="text-xl font-black text-slate-800 flex items-center gap-2">
               <span class="material-symbols-outlined text-primary">engineering</span>
               Mi Personal
             </h3>
-            <button
-              class="bg-primary text-white px-5 py-2.5 rounded-2xl text-sm font-bold flex items-center gap-2 hover:scale-105 active:scale-95 transition-all shadow-lg shadow-primary/25"
-              (click)="abrirModal()"
-            >
-              <span class="material-symbols-outlined text-sm">person_add</span> Nuevo Miembro
-            </button>
+            <div class="flex items-center gap-2 w-full sm:w-auto">
+              <button
+                type="button"
+                (click)="abrirModalEspecialidades()"
+                class="bg-slate-100 text-slate-700 px-5 py-2.5 rounded-2xl text-sm font-bold flex items-center gap-2 hover:bg-slate-200 active:scale-95 transition-all"
+              >
+                <span class="material-symbols-outlined text-sm">build</span> Especialidades
+              </button>
+
+              <button
+                class="bg-primary text-white px-5 py-2.5 rounded-2xl text-sm font-bold flex items-center gap-2 hover:scale-105 active:scale-95 transition-all shadow-lg shadow-primary/25"
+                (click)="abrirModal()"
+              >
+                <span class="material-symbols-outlined text-sm">person_add</span> Nuevo Miembro
+              </button>
+            </div>
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -151,20 +185,30 @@
             <h3 class="text-xl font-black text-slate-800">Reseñas Recientes</h3>
           </div>
 
-          <div *ngIf="listaReviews().length === 0" class="bg-white p-10 rounded-[2rem] text-center border border-slate-100">
+          <div
+            *ngIf="listaReviews().length === 0"
+            class="bg-white p-10 rounded-[2rem] text-center border border-slate-100"
+          >
             <p class="text-slate-400 font-bold italic">Aún no tienes reseñas de clientes.</p>
           </div>
 
           <div class="grid grid-cols-1 gap-4">
-            <div *ngFor="let review of listaReviews()" class="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 hover:border-yellow-200 transition-colors">
+            <div
+              *ngFor="let review of listaReviews()"
+              class="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 hover:border-yellow-200 transition-colors"
+            >
               <div class="flex justify-between items-start mb-4">
                 <div class="flex items-center gap-3">
-                  <div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
+                  <div
+                    class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400"
+                  >
                     <span class="material-symbols-outlined">person</span>
                   </div>
                   <div>
                     <h4 class="font-bold text-slate-800">{{ review.cliente }}</h4>
-                    <p class="text-[10px] text-slate-400 uppercase font-black">{{ review.fecha | date:'dd MMM yyyy' }}</p>
+                    <p class="text-[10px] text-slate-400 uppercase font-black">
+                      {{ review.fecha | date: 'dd MMM yyyy' }}
+                    </p>
                   </div>
                 </div>
                 <div class="flex items-center gap-1 bg-yellow-50 px-3 py-1 rounded-full">
@@ -172,7 +216,9 @@
                   <span class="material-symbols-outlined text-yellow-500 text-sm">star</span>
                 </div>
               </div>
-              <p class="text-sm text-slate-600 font-medium italic">"{{ review.comentario || 'Sin comentario' }}"</p>
+              <p class="text-sm text-slate-600 font-medium italic">
+                "{{ review.comentario || 'Sin comentario' }}"
+              </p>
             </div>
           </div>
         </section>
@@ -238,10 +284,7 @@
           Acceso para la App Móvil
         </p>
       </div>
-      <button
-        (click)="cerrarModal()"
-        class="text-slate-400 hover:text-red-500 transition-colors"
-      >
+      <button (click)="cerrarModal()" class="text-slate-400 hover:text-red-500 transition-colors">
         <span class="material-symbols-outlined">close</span>
       </button>
     </div>
@@ -258,14 +301,29 @@
               class="w-full h-full object-cover"
               [class.opacity-50]="subiendoFoto()"
             />
-            <span *ngIf="!fotoPreview()" class="material-symbols-outlined text-4xl text-slate-300">person</span>
-            <div *ngIf="subiendoFoto()" class="absolute inset-0 flex items-center justify-center bg-white/40">
-              <div class="w-6 h-6 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+            <span *ngIf="!fotoPreview()" class="material-symbols-outlined text-4xl text-slate-300"
+              >person</span
+            >
+            <div
+              *ngIf="subiendoFoto()"
+              class="absolute inset-0 flex items-center justify-center bg-white/40"
+            >
+              <div
+                class="w-6 h-6 border-4 border-primary border-t-transparent rounded-full animate-spin"
+              ></div>
             </div>
           </div>
-          <label class="absolute -bottom-2 -right-2 bg-primary text-white w-10 h-10 rounded-xl flex items-center justify-center shadow-lg cursor-pointer hover:scale-110 active:scale-95 transition-all">
+          <label
+            class="absolute -bottom-2 -right-2 bg-primary text-white w-10 h-10 rounded-xl flex items-center justify-center shadow-lg cursor-pointer hover:scale-110 active:scale-95 transition-all"
+          >
             <span class="material-symbols-outlined text-xl">add_a_photo</span>
-            <input type="file" (change)="onFileSelected($event)" class="hidden" accept="image/*" [disabled]="subiendoFoto()" />
+            <input
+              type="file"
+              (change)="onFileSelected($event)"
+              class="hidden"
+              accept="image/*"
+              [disabled]="subiendoFoto()"
+            />
           </label>
         </div>
         <p class="text-[10px] font-black text-slate-400 uppercase mt-4 tracking-widest text-center">
@@ -273,25 +331,51 @@
         </p>
       </div>
       <div>
-        <label class="text-[10px] font-black text-slate-400 uppercase ml-3 mb-1 block">Nombre Completo</label>
-        <input type="text" formControlName="nombre_completo" placeholder="Ej. Carlos Arana" class="w-full bg-slate-50 border-none rounded-2xl p-4 text-sm focus:ring-2 focus:ring-primary/20 outline-none" />
+        <label class="text-[10px] font-black text-slate-400 uppercase ml-3 mb-1 block"
+          >Nombre Completo</label
+        >
+        <input
+          type="text"
+          formControlName="nombre_completo"
+          placeholder="Ej. Carlos Arana"
+          class="w-full bg-slate-50 border-none rounded-2xl p-4 text-sm focus:ring-2 focus:ring-primary/20 outline-none"
+        />
       </div>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label class="text-[10px] font-black text-slate-400 uppercase ml-3 mb-1 block">Email</label>
-          <input type="email" formControlName="email" placeholder="correo@taller.com" class="w-full bg-slate-50 border-none rounded-2xl p-4 text-sm focus:ring-2 focus:ring-primary/20 outline-none" />
+          <label class="text-[10px] font-black text-slate-400 uppercase ml-3 mb-1 block"
+            >Email</label
+          >
+          <input
+            type="email"
+            formControlName="email"
+            placeholder="correo@taller.com"
+            class="w-full bg-slate-50 border-none rounded-2xl p-4 text-sm focus:ring-2 focus:ring-primary/20 outline-none"
+          />
         </div>
         <div>
-          <label class="text-[10px] font-black text-slate-400 uppercase ml-3 mb-1 block">Password</label>
-          <input type="password" formControlName="password" placeholder="******" class="w-full bg-slate-50 border-none rounded-2xl p-4 text-sm focus:ring-2 focus:ring-primary/20 outline-none" />
+          <label class="text-[10px] font-black text-slate-400 uppercase ml-3 mb-1 block"
+            >Password</label
+          >
+          <input
+            type="password"
+            formControlName="password"
+            placeholder="******"
+            class="w-full bg-slate-50 border-none rounded-2xl p-4 text-sm focus:ring-2 focus:ring-primary/20 outline-none"
+          />
         </div>
       </div>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label class="text-[10px] font-black text-slate-400 uppercase ml-3 mb-1 block">Cargo</label>
-          <select formControlName="cargo" class="w-full bg-slate-50 border-none rounded-2xl p-4 text-sm focus:ring-2 focus:ring-primary/20 outline-none appearance-none">
+          <label class="text-[10px] font-black text-slate-400 uppercase ml-3 mb-1 block"
+            >Cargo</label
+          >
+          <select
+            formControlName="cargo"
+            class="w-full bg-slate-50 border-none rounded-2xl p-4 text-sm focus:ring-2 focus:ring-primary/20 outline-none appearance-none"
+          >
             <option value="Mecánico">Mecánico</option>
             <option value="Electricista">Electricista</option>
             <option value="Llantero">Llantero</option>
@@ -299,27 +383,50 @@
           </select>
         </div>
         <div>
-          <label class="text-[10px] font-black text-slate-400 uppercase ml-3 mb-1 block">Especialidad</label>
-          <input type="text" formControlName="especialidad" placeholder="Ej. Motores" class="w-full bg-slate-50 border-none rounded-2xl p-4 text-sm focus:ring-2 focus:ring-primary/20 outline-none" />
+          <label class="text-[10px] font-black text-slate-400 uppercase ml-3 mb-1 block"
+            >Especialidad</label
+          >
+          <input
+            type="text"
+            formControlName="especialidad"
+            placeholder="Ej. Motores"
+            class="w-full bg-slate-50 border-none rounded-2xl p-4 text-sm focus:ring-2 focus:ring-primary/20 outline-none"
+          />
         </div>
       </div>
 
-      <button type="submit" [disabled]="personalForm.invalid" class="w-full bg-primary text-white py-4 rounded-2xl font-black uppercase tracking-widest mt-4 shadow-lg shadow-primary/30 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50">
+      <button
+        type="submit"
+        [disabled]="personalForm.invalid"
+        class="w-full bg-primary text-white py-4 rounded-2xl font-black uppercase tracking-widest mt-4 shadow-lg shadow-primary/30 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
+      >
         Confirmar Registro
       </button>
     </form>
   </div>
 </div>
 
-<!-- Modal Detalle Emergencia (RESTAURADO EXACTAMENTE) -->
-<div *ngIf="mostrarModalDetalle()" class="fixed inset-0 z-[100] flex items-center justify-center p-4">
-  <div class="absolute inset-0 bg-secondary/80 backdrop-blur-md transition-opacity" (click)="cerrarDetalleEmergencia()"></div>
-  <div class="bg-white rounded-[2.5rem] w-full max-w-3xl overflow-hidden shadow-2xl relative z-10 animate-in fade-in zoom-in duration-300 flex flex-col md:flex-row">
+<!-- ========================================== -->
+<!-- MODAL DETALLE EMERGENCIA (YA LIMPIO Y CERRADO) -->
+<!-- ========================================== -->
+<div
+  *ngIf="mostrarModalDetalle()"
+  class="fixed inset-0 z-[100] flex items-center justify-center p-4"
+>
+  <div
+    class="absolute inset-0 bg-secondary/80 backdrop-blur-md transition-opacity"
+    (click)="cerrarDetalleEmergencia()"
+  ></div>
+
+  <div
+    class="bg-white rounded-[2.5rem] w-full max-w-3xl overflow-hidden shadow-2xl relative z-10 animate-in fade-in zoom-in duration-300 flex flex-col md:flex-row"
+  >
+    <!-- Columna Izquierda: Evidencia e Info -->
     <div class="md:w-1/2 bg-slate-50 p-8 border-r border-slate-100 flex flex-col">
       <div class="flex justify-between items-start mb-6">
         <div>
           <h3 class="text-xl font-black text-slate-800 italic">Misión de Rescate</h3>
-          <p 
+          <p
             [class.text-red-500]="emergenciaSeleccionada()?.prioridad === 'alta'"
             [class.text-orange-500]="emergenciaSeleccionada()?.prioridad === 'media'"
             [class.text-blue-500]="emergenciaSeleccionada()?.prioridad === 'baja'"
@@ -329,27 +436,50 @@
           </p>
         </div>
       </div>
-      <a [href]="'https://www.google.com/maps/search/?api=1&query=' + emergenciaSeleccionada()?.ubicacion_real" target="_blank" class="w-full h-44 bg-blue-50 rounded-[2rem] overflow-hidden mb-6 relative border-4 border-white shadow-sm flex items-center justify-center group transition-all hover:bg-blue-100">
+
+      <a
+        [href]="
+          'https://www.google.com/maps/search/?api=1&query=' +
+          emergenciaSeleccionada()?.ubicacion_real
+        "
+        target="_blank"
+        class="w-full h-44 bg-blue-50 rounded-[2rem] overflow-hidden mb-6 relative border-4 border-white shadow-sm flex items-center justify-center group transition-all hover:bg-blue-100"
+      >
         <div class="flex flex-col items-center gap-2 group-hover:scale-110 transition-transform">
-          <span class="material-symbols-outlined text-primary text-5xl bg-white p-3 rounded-full shadow-sm">location_on</span>
-          <p class="text-[10px] font-black text-primary uppercase tracking-widest">Abrir en Google Maps</p>
+          <span
+            class="material-symbols-outlined text-primary text-5xl bg-white p-3 rounded-full shadow-sm"
+            >location_on</span
+          >
+          <p class="text-[10px] font-black text-primary uppercase tracking-widest">
+            Abrir en Google Maps
+          </p>
         </div>
-        <div class="absolute bottom-4 bg-white/95 backdrop-blur px-4 py-2 rounded-xl text-xs font-bold text-slate-700 shadow-lg flex items-center gap-2">
+        <div
+          class="absolute bottom-4 bg-white/95 backdrop-blur px-4 py-2 rounded-xl text-xs font-bold text-slate-700 shadow-lg flex items-center gap-2"
+        >
           <span class="material-symbols-outlined text-primary text-sm">route</span>
           A {{ distanciaCalculada() }} del taller
         </div>
       </a>
+
       <div class="space-y-6">
         <div>
-          <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Evidencia del Accidente</p>
+          <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">
+            Evidencia del Accidente
+          </p>
           <div class="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
             <ng-container *ngIf="emergenciaSeleccionada()?.fotos?.length; else sinFotos">
               <div *ngFor="let foto of emergenciaSeleccionada()?.fotos" class="flex-shrink-0">
-                <img [src]="foto" class="w-24 h-24 object-cover rounded-2xl border-2 border-white shadow-md hover:scale-105 transition-transform cursor-pointer" />
+                <img
+                  [src]="foto"
+                  class="w-24 h-24 object-cover rounded-2xl border-2 border-white shadow-md hover:scale-105 transition-transform cursor-pointer"
+                />
               </div>
             </ng-container>
             <ng-template #sinFotos>
-              <div class="w-full py-6 bg-slate-100 rounded-2xl text-center border-2 border-dashed border-slate-200">
+              <div
+                class="w-full py-6 bg-slate-100 rounded-2xl text-center border-2 border-dashed border-slate-200"
+              >
                 <p class="text-[10px] font-bold text-slate-400 uppercase">Sin imágenes adjuntas</p>
               </div>
             </ng-template>
@@ -361,48 +491,86 @@
             <p class="font-bold text-slate-800">{{ emergenciaSeleccionada()?.vehiculo }}</p>
           </div>
           <div>
-            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Problema Reportado</p>
-            <p class="text-sm font-medium text-slate-600">{{ emergenciaSeleccionada()?.descripcion }}</p>
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+              Problema Reportado
+            </p>
+            <p class="text-sm font-medium text-slate-600">
+              {{ emergenciaSeleccionada()?.descripcion }}
+            </p>
           </div>
         </div>
       </div>
     </div>
+
+    <!-- Columna Derecha: Asignación (Aquí quitamos los duplicados) -->
     <div class="md:w-1/2 p-8 flex flex-col">
       <div class="flex justify-end mb-4">
-        <button (click)="cerrarDetalleEmergencia()" class="text-slate-400 hover:text-red-500 transition-colors bg-slate-100 hover:bg-red-50 p-2 rounded-full">
+        <button
+          (click)="cerrarDetalleEmergencia()"
+          class="text-slate-400 hover:text-red-500 transition-colors bg-slate-100 hover:bg-red-50 p-2 rounded-full"
+        >
           <span class="material-symbols-outlined">close</span>
         </button>
       </div>
-      
-      <!-- NUEVO: Bloque de Diagnóstico IA (Grok & Gemini) -->
-      <div *ngIf="emergenciaSeleccionada()?.diagnostico_ia" class="mb-6 bg-indigo-50/50 border border-indigo-100 p-6 rounded-[2rem] relative overflow-hidden">
-        <div class="absolute -right-4 -top-4 w-24 h-24 bg-indigo-100/50 rounded-full blur-2xl"></div>
+
+      <!-- Bloque de Diagnóstico IA -->
+      <div
+        *ngIf="emergenciaSeleccionada()?.diagnostico_ia"
+        class="mb-6 bg-indigo-50/50 border border-indigo-100 p-6 rounded-[2rem] relative overflow-hidden"
+      >
+        <div
+          class="absolute -right-4 -top-4 w-24 h-24 bg-indigo-100/50 rounded-full blur-2xl"
+        ></div>
         <div class="flex items-center gap-2 mb-3">
-          <span class="material-symbols-outlined text-indigo-600 text-lg animate-pulse">psychology</span>
-          <p class="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Análisis IA (Groq & Gemini)</p>
+          <span class="material-symbols-outlined text-indigo-600 text-lg animate-pulse"
+            >psychology</span
+          >
+          <p class="text-[10px] font-black text-indigo-600 uppercase tracking-widest">
+            Análisis IA (Groq & Gemini)
+          </p>
         </div>
-        
         <div class="relative">
           <p class="text-sm font-medium text-slate-700 leading-relaxed italic">
             {{ diagnosticoAnimado() }}
-            <span *ngIf="typingInProgress()" class="inline-block w-1.5 h-4 bg-indigo-600 ml-1 animate-pulse align-middle"></span>
+            <span
+              *ngIf="typingInProgress()"
+              class="inline-block w-1.5 h-4 bg-indigo-600 ml-1 animate-pulse align-middle"
+            ></span>
           </p>
         </div>
       </div>
 
       <h4 class="text-lg font-black text-slate-800 mb-2">Asignar Personal</h4>
-      <p class="text-xs text-slate-500 mb-8">Selecciona el mecánico de tu equipo que atenderá esta emergencia.</p>
+      <p class="text-xs text-slate-500 mb-8">
+        Selecciona el mecánico de tu equipo que atenderá esta emergencia.
+      </p>
+
       <div class="flex-grow">
-        <label class="text-[10px] font-black text-slate-400 uppercase ml-3 mb-2 block">Mecánico Disponible</label>
+        <label class="text-[10px] font-black text-slate-400 uppercase ml-3 mb-2 block"
+          >Mecánico Disponible</label
+        >
         <div class="relative">
-          <select (change)="seleccionarPersonal($event)" class="w-full bg-white border-2 border-slate-200 rounded-2xl p-4 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none appearance-none cursor-pointer hover:border-slate-300 transition-colors">
+          <select
+            (change)="seleccionarPersonal($event)"
+            class="w-full bg-white border-2 border-slate-200 rounded-2xl p-4 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none appearance-none cursor-pointer hover:border-slate-300 transition-colors"
+          >
             <option value="" disabled selected>-- Elige un mecánico --</option>
-            <option *ngFor="let persona of listaPersonal()" [value]="persona.id">{{ persona.nombre_completo }} - {{ persona.cargo }}</option>
+            <option *ngFor="let persona of listaPersonal()" [value]="persona.id">
+              {{ persona.nombre_completo }} - {{ persona.cargo }}
+            </option>
           </select>
-          <span class="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">expand_more</span>
+          <span
+            class="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+            >expand_more</span
+          >
         </div>
       </div>
-      <button (click)="aceptarEmergencia()" [disabled]="listaPersonal().length === 0" class="w-full bg-red-600 text-white py-4 rounded-2xl font-black uppercase tracking-widest mt-6 shadow-lg shadow-red-500/30 hover:bg-red-700 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50">
+
+      <button
+        (click)="aceptarEmergencia()"
+        [disabled]="listaPersonal().length === 0"
+        class="w-full bg-red-600 text-white py-4 rounded-2xl font-black uppercase tracking-widest mt-6 shadow-lg shadow-red-500/30 hover:bg-red-700 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
+      >
         Confirmar Asignación
       </button>
     </div>
@@ -500,5 +668,79 @@
       </button>
     </div>
 
+  </div>
+</div>
+<!-- AQUÍ SE CERRÓ CORRECTAMENTE EL MODAL DE EMERGENCIAS -->
+
+<!-- ========================================== -->
+<!-- MODAL ESPECIALIDADES (AHORA SÍ ESTÁ LIBRE AFUERA) -->
+<!-- ========================================== -->
+<div
+  *ngIf="mostrarModalEspecialidades()"
+  class="fixed inset-0 z-[100] flex items-center justify-center p-4"
+>
+  <div
+    class="absolute inset-0 bg-secondary/60 backdrop-blur-sm transition-opacity"
+    (click)="mostrarModalEspecialidades.set(false)"
+  ></div>
+
+  <div
+    class="bg-white rounded-[2.5rem] w-full max-w-md p-8 shadow-2xl relative z-10 animate-in fade-in zoom-in duration-300 flex flex-col"
+  >
+    <div class="flex justify-between items-center mb-6">
+      <div>
+        <h3 class="text-xl font-black text-slate-800 italic">Especialidades</h3>
+        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+          Filtros de servicio del Taller
+        </p>
+      </div>
+      <button
+        (click)="mostrarModalEspecialidades.set(false)"
+        class="text-slate-400 hover:text-red-500 transition-colors"
+      >
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+
+    <p class="text-xs text-slate-500 mb-4">
+      Selecciona las ramas automotrices que tu taller está capacitado para solucionar:
+    </p>
+
+    <div class="max-h-60 overflow-y-auto space-y-3 pr-2 mb-6 scrollbar-hide">
+      <div
+        *ngFor="let esp of misEspecialidadesTaller(); let i = index"
+        class="flex items-center gap-3 bg-slate-50 p-3.5 rounded-2xl border border-slate-100 hover:border-primary/20 transition-all cursor-pointer"
+        (click)="toggleEspecialidad(i)"
+      >
+        <input
+          type="checkbox"
+          [checked]="esp.activo"
+          (change)="$event.stopPropagation(); toggleEspecialidad(i)"
+          [id]="'check-' + esp.id"
+          class="w-4 h-4 rounded text-primary focus:ring-primary/20 border-slate-300 cursor-pointer"
+        />
+        <label
+          [for]="'check-' + esp.id"
+          class="text-sm font-bold text-slate-700 cursor-pointer flex-grow select-none"
+        >
+          {{ esp.nombre }}
+        </label>
+      </div>
+    </div>
+
+    <div class="space-y-2">
+      <button
+        (click)="guardarEspecialidadesTaller()"
+        class="w-full bg-primary text-white py-4 rounded-2xl font-black uppercase tracking-widest shadow-lg shadow-primary/30 hover:scale-[1.02] active:scale-95 transition-all"
+      >
+        Guardar Cambios
+      </button>
+      <button
+        (click)="mostrarModalEspecialidades.set(false)"
+        class="w-full bg-slate-100 text-slate-600 py-3 rounded-2xl font-bold uppercase tracking-wider text-xs hover:bg-slate-200 transition-all text-center"
+      >
+        Cancelar
+      </button>
+    </div>
   </div>
 </div>

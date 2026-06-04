@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Float, Enum, Boolean
+from sqlalchemy import Column, Integer, String, ForeignKey, Float, Enum, Boolean, Table
 from sqlalchemy.orm import relationship
 from app.core.database import Base
 import enum
@@ -41,6 +41,23 @@ class Cliente(Usuario):
     vehiculos = relationship("app.modules.vehiculos.models.Vehiculo", back_populates="dueno")
     __mapper_args__ = {"polymorphic_identity": "cliente"}
 
+taller_especialidad = Table(
+    "taller_especialidad",
+    Base.metadata,
+    Column("taller_id", Integer, ForeignKey("perfil_talleres.id", ondelete="CASCADE"), primary_key=True),
+    Column("especialidad_id", Integer, ForeignKey("especialidades.id", ondelete="CASCADE"), primary_key=True)
+)
+# 2. MODELO DE ESPECIALIDADES
+class Especialidad(Base):
+    __tablename__ = "especialidades"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    nombre = Column(String(100), unique=True, nullable=False) # Ej: "Electricidad", "Mecánica General", "Gomería", "Chapa y Pintura"
+    descripcion = Column(String(255), nullable=True)
+
+    # Relación inversa (opcional, por si quieres saber qué talleres tienen esta especialidad)
+    talleres = relationship("Taller", secondary=taller_especialidad, back_populates="especialidades")
+
 class Taller(Usuario):
     __tablename__ = "perfil_talleres"
     id = Column(Integer, ForeignKey("usuarios.id"), primary_key=True)
@@ -56,9 +73,11 @@ class Taller(Usuario):
     # Para geolocalización (lat/lng)
     latitud = Column(Float, nullable=True)
     longitud = Column(Float, nullable=True)
-    
+    # 3. AGREGAR ESTA RELACIÓN MUCHOS A MUCHOS
+    especialidades = relationship("Especialidad", secondary=taller_especialidad, back_populates="talleres")
     personal = relationship("PersonalTaller", back_populates="taller", foreign_keys="PersonalTaller.taller_id")
     __mapper_args__ = {"polymorphic_identity": "taller"}
+
     
 class PersonalTaller(Usuario):
     """ Empleados del taller: mecánicos, electricistas, admins, etc. """
@@ -96,3 +115,6 @@ class CalificacionTaller(Base):
     # Relaciones
     cliente = relationship("Cliente", backref="calificaciones_dadas")
     taller = relationship("Taller", backref="calificaciones_recibidas")
+
+
+

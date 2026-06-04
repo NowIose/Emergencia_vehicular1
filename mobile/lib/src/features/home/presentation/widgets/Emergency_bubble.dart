@@ -51,6 +51,8 @@ class _EmergencyBubbleState extends State<EmergencyBubble> {
     super.initState();
     _vehiculoSeleccionado = widget.idVehiculoSeleccionado;
     _initSpeech(); // --- NUEVO ---
+    // Intentar sincronizar alertas pendientes guardadas en offline al arrancar la pantalla
+    _sincronizarEmergenciasPendientes();
   }
 
   // --- NUEVO: Función para inicializar el micrófono ---
@@ -189,7 +191,7 @@ class _EmergencyBubbleState extends State<EmergencyBubble> {
     );
   }
 
-  // 3. Función para enviar al Backend
+  // 5. Función para enviar al Backend (MODIFICADA CON MANEJO OFFLINE)
   Future<void> _enviarEmergencia(BuildContext context) async {
     if (_descripcionController.text.isEmpty || _ubicacionActual == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -207,40 +209,39 @@ class _EmergencyBubbleState extends State<EmergencyBubble> {
     setState(() => _isLoading = true);
 
     try {
-      // Primero subir las fotos
+      // Intentar procesar flujo normal (Online)
       List<String> fotosUrls = [];
       if (_fotosTomadas.isNotEmpty) {
         setState(() => _isUploadingFotos = true);
         fotosUrls = await _subirFotos();
-        print("URLS de las fotos subidas: $fotosUrls");
         setState(() => _isUploadingFotos = false);
       }
+
       const storage = FlutterSecureStorage();
       String? token = await storage.read(key: 'jwt_token');
-
-      // Cambia esta IP por la de tu servidor backend local (ej. 10.0.2.2 para emulador Android o tu IP local para Windows/Dispositivo físico)
       final url = Uri.parse('$_baseUrl/emergencias/');
-      print("Enviando a: $url"); // Debug para ver la ruta
-      print("Token: ${token != null ? 'Presente' : 'Nulo'}");
-      final response = await http.post(
-        url,
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          if (token != null) 'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode({
-          "id_vehiculo": _vehiculoSeleccionado,
-          "ubicacion_real": _ubicacionActual,
-          "descripcion": _descripcionController.text,
-          "prioridad": "alta",
-          "fotos": fotosUrls,
-        }),
-      );
-      print("Status Code: ${response.statusCode}");
-      print("Response Body: ${response.body}");
+
+      final response = await http
+          .post(
+            url,
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              if (token != null) 'Authorization': 'Bearer $token',
+            },
+            body: jsonEncode({
+              "id_vehiculo": _vehiculoSeleccionado,
+              "ubicacion_real": _ubicacionActual,
+              "descripcion": _descripcionController.text,
+              "prioridad": "alta",
+              "fotos": fotosUrls,
+            }),
+          )
+          .timeout(
+            const Duration(seconds: 10),
+          ); // Timeout para forzar captura si la red está colgada
+
       if (response.statusCode >= 200 && response.statusCode < 300) {
-        // Éxito
         if (mounted) Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('🚨 Alerta enviada exitosamente')),
@@ -248,22 +249,189 @@ class _EmergencyBubbleState extends State<EmergencyBubble> {
         _descripcionController.clear();
         _ubicacionActual = null;
         _fotosTomadas.clear();
+
+        // Aprovechar que recuperó señal para vaciar cualquier otra alerta pendiente previa
+        _sincronizarEmergenciasPendientes();
       } else {
-        // Error controlado por el Backend (401, 403, 422)
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error ${response.statusCode}: ${response.body}'),
           ),
         );
       }
+    } on SocketException catch (e) {
+      // 🚨 PRINT DE CONTROL
+      print("🚨 INSTANCIA DETECTADA: SocketException (Celular sin internet).");
+      print("Detalle del error: $e");
+      // CAPTURA DE FALTA DE INTERNET: Guardar localmente de inmediato
+      await _guardarEmergenciaLocal();
     } catch (e) {
-      // Error de red (IP incorrecta o servidor apagado)
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error de conexión: $e')));
+      // 🚨 PRINT DE CONTROL
+      print("🚨 INSTANCIA DETECTADA: Otro tipo de error de red.");
+      print("Detalle: $e");
+      // Otras excepciones de red (ej. Tiempos de espera agotados)
+      await _guardarEmergenciaLocal();
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  // --- NUEVA FUNCIÓN: Guarda la emergencia localmente si no hay internet ---
+  Future<void> _guardarEmergenciaLocal() async {
+    try {
+      const storage = FlutterSecureStorage();
+      String? pendientesStr = await storage.read(key: 'emergencias_pendientes');
+      List<dynamic> pendientes = [];
+
+      if (pendientesStr != null && pendientesStr.isNotEmpty) {
+        pendientes = jsonDecode(pendientesStr);
+      }
+
+      // Estructuramos el payload offline guardando las rutas de los archivos locales
+      Map<String, dynamic> nuevaEmergenciaOffline = {
+        "id_vehiculo": _vehiculoSeleccionado,
+        "ubicacion_real": _ubicacionActual,
+        "descripcion": _descripcionController.text,
+        "prioridad": "alta",
+        "fotos_locales": _fotosTomadas.map((f) => f.path).toList(),
+        "fecha_creacion": DateTime.now().toIso8601String(),
+      };
+
+      pendientes.add(nuevaEmergenciaOffline);
+      await storage.write(
+        key: 'emergencias_pendientes',
+        value: jsonEncode(pendientes),
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              '📴 Sin internet. Auxilio guardado localmente, se enviará al conectar.',
+            ),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 5),
+          ),
+        );
+        Navigator.pop(context);
+        _descripcionController.clear();
+        _ubicacionActual = null;
+        _fotosTomadas.clear();
+      }
+    } catch (e) {
+      debugPrint("Error al guardar caché offline: $e");
+    }
+  }
+
+  // --- NUEVA FUNCIÓN: Sube fotos almacenadas localmente durante el modo offline ---
+  Future<List<String>> _subirFotosOffline(List<dynamic> paths) async {
+    List<String> urls = [];
+    final urlUpload = Uri.parse('$_baseUrl/usuarios/upload-image');
+    const storage = FlutterSecureStorage();
+    String? token = await storage.read(key: 'jwt_token');
+
+    for (dynamic path in paths) {
+      File foto = File(path.toString());
+      if (!await foto.exists())
+        continue; // Si el archivo temporal ya no existe, lo salta
+
+      var request = http.MultipartRequest('POST', urlUpload);
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'file',
+          foto.path,
+          contentType: MediaType('image', 'jpeg'),
+        ),
+      );
+      request.fields['folder'] = 'emergencia_vehicular/emergencias';
+      request.headers.addAll({
+        'Accept': 'application/json',
+        if (token != null) 'Authorization': 'Bearer $token',
+      });
+
+      try {
+        var response = await request.send();
+        var respStr = await response.stream.bytesToString();
+        if (response.statusCode == 201 || response.statusCode == 200) {
+          var jsonResp = jsonDecode(respStr);
+          urls.add(jsonResp['url']);
+        }
+      } catch (e) {
+        debugPrint("Error subiendo foto en background: $e");
+        rethrow; // Propaga el error para detener la sincronización de este registro si falla la red
+      }
+    }
+    return urls;
+  }
+
+  // --- NUEVA FUNCIÓN: Proceso de sincronización en segundo plano ---
+  Future<void> _sincronizarEmergenciasPendientes() async {
+    const storage = FlutterSecureStorage();
+    String? pendientesStr = await storage.read(key: 'emergencias_pendientes');
+
+    if (pendientesStr == null ||
+        pendientesStr.isEmpty ||
+        pendientesStr == '[]') {
+      return;
+    }
+
+    debugPrint(
+      "🔄 Detectadas emergencias offline pendientes por sincronizar...",
+    );
+    List<dynamic> pendientes = jsonDecode(pendientesStr);
+    List<dynamic> noEnviados = [];
+
+    String? token = await storage.read(key: 'jwt_token');
+    final url = Uri.parse('$_baseUrl/emergencias/');
+
+    for (var emergencia in pendientes) {
+      try {
+        List<String> fotosUrls = [];
+        List<dynamic> fotosLocales = emergencia['fotos_locales'] ?? [];
+
+        // 1. Subir las fotos locales si existen rutas guardadas
+        if (fotosLocales.isNotEmpty) {
+          fotosUrls = await _subirFotosOffline(fotosLocales);
+        }
+
+        // 2. Enviar el reporte definitivo al backend
+        final response = await http.post(
+          url,
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            if (token != null) 'Authorization': 'Bearer $token',
+          },
+          body: jsonEncode({
+            "id_vehiculo": emergencia["id_vehiculo"],
+            "ubicacion_real": emergencia["ubicacion_real"],
+            "descripcion": emergencia["descripcion"],
+            "prioridad": emergencia["prioridad"],
+            "fotos": fotosUrls,
+          }),
+        );
+
+        if (response.statusCode >= 200 && response.statusCode < 300) {
+          debugPrint("✅ Emergencia offline sincronizada correctamente.");
+        } else {
+          // Si el servidor responde con error de validación, mantenlo para no perder el dato
+          noEnviados.add(emergencia);
+        }
+      } catch (e) {
+        // Si vuelve a fallar la conexión, conservamos la emergencia en la cola
+        debugPrint(
+          "❌ Falló el intento de sincronización local (sigue sin red): $e",
+        );
+        noEnviados.add(emergencia);
+        break; // Detiene el bucle para evitar reintentos innecesarios en este ciclo
+      }
+    }
+
+    // Actualizar el almacenamiento con lo que quedó pendiente o vacío si todo se envió
+    await storage.write(
+      key: 'emergencias_pendientes',
+      value: jsonEncode(noEnviados),
+    );
   }
 
   // --- NUEVO: Iniciar escucha ---
@@ -276,11 +444,12 @@ class _EmergencyBubbleState extends State<EmergencyBubble> {
           _descripcionController.text = result.recognizedWords;
           // Coloca el cursor al final del texto
           _descripcionController.selection = TextSelection.fromPosition(
-            TextPosition(offset: _descripcionController.text.length)
+            TextPosition(offset: _descripcionController.text.length),
           );
         });
       },
-      localeId: 'es_ES', // Fuerza el idioma a español (puedes ajustarlo si prefieres otro)
+      localeId:
+          'es_ES', // Fuerza el idioma a español (puedes ajustarlo si prefieres otro)
     );
     setModalState(() {});
   }
@@ -290,6 +459,7 @@ class _EmergencyBubbleState extends State<EmergencyBubble> {
     await _speechToText.stop();
     setModalState(() {});
   }
+
   void _showEmergencySheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -384,8 +554,8 @@ class _EmergencyBubbleState extends State<EmergencyBubble> {
                       controller: _descripcionController,
                       maxLines: 3,
                       decoration: InputDecoration(
-                        hintText: _speechToText.isListening 
-                            ? 'Escuchando...' 
+                        hintText: _speechToText.isListening
+                            ? 'Escuchando...'
                             : '¿Qué le ocurrió a tu vehículo?',
                         filled: true,
                         fillColor: Colors.grey.shade200,
@@ -396,19 +566,27 @@ class _EmergencyBubbleState extends State<EmergencyBubble> {
                         // Añadimos el ícono del micrófono a la derecha
                         suffixIcon: IconButton(
                           icon: Icon(
-                            _speechToText.isListening ? Icons.mic : Icons.mic_none,
-                            color: _speechToText.isListening ? Colors.red : Colors.grey.shade600,
+                            _speechToText.isListening
+                                ? Icons.mic
+                                : Icons.mic_none,
+                            color: _speechToText.isListening
+                                ? Colors.red
+                                : Colors.grey.shade600,
                             size: 28,
                           ),
                           onPressed: () {
                             // Verificamos si los permisos fueron concedidos
                             if (!_speechEnabled) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('El reconocimiento de voz no está disponible.')),
+                                const SnackBar(
+                                  content: Text(
+                                    'El reconocimiento de voz no está disponible.',
+                                  ),
+                                ),
                               );
                               return;
                             }
-                            
+
                             // Alternar entre escuchar y detener
                             if (_speechToText.isNotListening) {
                               _startListening(setModalState);
