@@ -159,7 +159,7 @@ export class DashboardComponent implements OnInit {
       .openPopup();
   }
 
-  abrirDetalleTaller(taller: any) {
+ /* abrirDetalleTaller(taller: any) {
     this.tallerSeleccionado.set(taller);
     this.mostrarModalTaller.set(true);
     
@@ -167,18 +167,18 @@ export class DashboardComponent implements OnInit {
     setTimeout(() => {
       this.initMapaTaller(taller.latitud, taller.longitud, taller.nombre_taller);
     }, 100);
-  }
+  }*/
 
-  cerrarModalTaller() {
+ /* cerrarModalTaller() {
     this.mostrarModalTaller.set(false);
     this.tallerSeleccionado.set(null);
     if (this.mapTaller) {
       this.mapTaller.remove();
       this.mapTaller = null;
     }
-  }
+  }*/
 
-  private initMapaTaller(lat: number, lng: number, nombre: string) {
+ /* private initMapaTaller(lat: number, lng: number, nombre: string) {
     if (this.mapTaller) {
       this.mapTaller.remove();
     }
@@ -207,7 +207,7 @@ export class DashboardComponent implements OnInit {
       .addTo(this.mapTaller)
       .bindPopup(`<b>${nombre}</b>`)
       .openPopup();
-  }
+  }*/
 
   cargarReviews() {
     const token = localStorage.getItem('access_token');
