@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 
 from app.core.database import get_db
-from .models import Taller, UserRole, Cliente, CalificacionTaller, Especialidad
+from .models import Taller, UserRole, Cliente, CalificacionTaller, Especialidad, taller_especialidad
 from .schemas import TallerCreate, ClienteCreate
 from app.modules.bitacora.utils import registrar_evento
 
@@ -362,41 +362,68 @@ async def delete_image_view(request: DeleteImageRequest):
             detail="No se pudo eliminar la imagen del servidor"
         )
     
-    # --- ENDPOINTS PARA ESPECIALIDADES DEL TALLER ---
+# --- ENDPOINTS PARA ESPECIALIDADES DEL TALLER ---
 
-@router.get("/especialidades/todas", response_model=List[EspecialidadResponse])
+# --- ENDPOINTS PARA ESPECIALIDADES DEL TALLER ---
+
+class ActualizarEspecialidadesRequest(BaseModel):
+    especialidades_ids: List[int]
+
+# ⚠️ ¡AQUÍ ESTÁ LA CORRECCIÓN! Las rutas van sin espacios al inicio (alineadas a la izquierda)
+
+@router.get("/especialidades")
 def obtener_todas_las_especialidades(db: Session = Depends(get_db)):
     """
-    Retorna la lista de todas las especialidades del sistema para que el taller elija.
+    Retorna la lista de todas las especialidades del sistema.
+    Mapea exactamente al GET /usuarios/especialidades que está pidiendo Angular.
     """
     return db.query(Especialidad).all()
 
 
-@router.put("/taller/mis-especialidades", status_code=status.HTTP_200_OK)
-def actualizar_especialidades_taller(
-    especialidades_ids: List[int], 
+@router.get("/taller/mis-especialidades")
+def obtener_mis_especialidades(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user)
 ):
     """
-    Actualiza las especialidades que ofrece el taller autenticado.
+    Retorna todas las especialidades mapeadas con el campo 'activo' (True/False)
+    para el checklist del taller logueado.
     """
     if current_user.rol != UserRole.ADMIN_TALLER:
-        raise HTTPException(
-            status_code=403, 
-            detail="Solo los administradores de taller pueden configurar sus especialidades"
-        )
+        raise HTTPException(status_code=403, detail="No autorizado")
+
+    taller = db.query(Taller).filter(Taller.id == current_user.id).first()
+    if not taller:
+        raise HTTPException(status_code=404, detail="Perfil de taller no encontrado")
+
+    todas_especialidades = db.query(Especialidad).all()
+    ids_actuales = {esp.id for esp in taller.especialidades}
+
+    return [
+        {
+            "id": esp.id,
+            "nombre": esp.nombre,
+            "activo": esp.id in ids_actuales
+        }
+        for esp in todas_especialidades
+    ]
+
+
+@router.put("/taller/mis-especialidades", status_code=status.HTTP_200_OK)
+def actualizar_especialidades_taller(
+    payload: ActualizarEspecialidadesRequest, 
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user)
+):
+    if current_user.rol != UserRole.ADMIN_TALLER:
+        raise HTTPException(status_code=403, detail="No autorizado")
     
-    # 1. Buscar el perfil específico del taller usando el ID del usuario actual
     taller = db.query(Taller).filter(Taller.id == current_user.id).first()
     if not taller:
         raise HTTPException(status_code=404, detail="Perfil de taller no encontrado")
     
-    # 2. Buscar las entidades de especialidad que coincidan con los IDs enviados
-    especialidades_elegidas = db.query(Especialidad).filter(Especialidad.id.in_(especialidades_ids)).all()
-    
-    # 3. Reemplazar la relación muchos a muchos de SQLAlchemy
+    especialidades_elegidas = db.query(Especialidad).filter(Especialidad.id.in_(payload.especialidades_ids)).all()
     taller.especialidades = especialidades_elegidas
-    
     db.commit()
+    
     return {"message": "Especialidades del taller actualizadas con éxito"}

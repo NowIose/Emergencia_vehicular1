@@ -122,6 +122,7 @@
             <div class="flex items-center gap-2 w-full sm:w-auto">
               <button
                 type="button"
+                (click)="abrirModalEspecialidades()"
                 class="bg-slate-100 text-slate-700 px-5 py-2.5 rounded-2xl text-sm font-bold flex items-center gap-2 hover:bg-slate-200 active:scale-95 transition-all"
               >
                 <span class="material-symbols-outlined text-sm">build</span> Especialidades
@@ -403,7 +404,9 @@
   </div>
 </div>
 
-<!-- Modal Detalle Emergencia (RESTAURADO EXACTAMENTE) -->
+<!-- ========================================== -->
+<!-- MODAL DETALLE EMERGENCIA (YA LIMPIO Y CERRADO) -->
+<!-- ========================================== -->
 <div
   *ngIf="mostrarModalDetalle()"
   class="fixed inset-0 z-[100] flex items-center justify-center p-4"
@@ -412,9 +415,11 @@
     class="absolute inset-0 bg-secondary/80 backdrop-blur-md transition-opacity"
     (click)="cerrarDetalleEmergencia()"
   ></div>
+
   <div
     class="bg-white rounded-[2.5rem] w-full max-w-3xl overflow-hidden shadow-2xl relative z-10 animate-in fade-in zoom-in duration-300 flex flex-col md:flex-row"
   >
+    <!-- Columna Izquierda: Evidencia e Info -->
     <div class="md:w-1/2 bg-slate-50 p-8 border-r border-slate-100 flex flex-col">
       <div class="flex justify-between items-start mb-6">
         <div>
@@ -429,6 +434,7 @@
           </p>
         </div>
       </div>
+
       <a
         [href]="
           'https://www.google.com/maps/search/?api=1&query=' +
@@ -453,6 +459,7 @@
           A {{ distanciaCalculada() }} del taller
         </div>
       </a>
+
       <div class="space-y-6">
         <div>
           <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">
@@ -492,6 +499,8 @@
         </div>
       </div>
     </div>
+
+    <!-- Columna Derecha: Asignación (Aquí quitamos los duplicados) -->
     <div class="md:w-1/2 p-8 flex flex-col">
       <div class="flex justify-end mb-4">
         <button
@@ -502,7 +511,7 @@
         </button>
       </div>
 
-      <!-- NUEVO: Bloque de Diagnóstico IA (Grok & Gemini) -->
+      <!-- Bloque de Diagnóstico IA -->
       <div
         *ngIf="emergenciaSeleccionada()?.diagnostico_ia"
         class="mb-6 bg-indigo-50/50 border border-indigo-100 p-6 rounded-[2rem] relative overflow-hidden"
@@ -518,7 +527,6 @@
             Análisis IA (Groq & Gemini)
           </p>
         </div>
-
         <div class="relative">
           <p class="text-sm font-medium text-slate-700 leading-relaxed italic">
             {{ diagnosticoAnimado() }}
@@ -534,6 +542,7 @@
       <p class="text-xs text-slate-500 mb-8">
         Selecciona el mecánico de tu equipo que atenderá esta emergencia.
       </p>
+
       <div class="flex-grow">
         <label class="text-[10px] font-black text-slate-400 uppercase ml-3 mb-2 block"
           >Mecánico Disponible</label
@@ -554,12 +563,87 @@
           >
         </div>
       </div>
+
       <button
         (click)="aceptarEmergencia()"
         [disabled]="listaPersonal().length === 0"
         class="w-full bg-red-600 text-white py-4 rounded-2xl font-black uppercase tracking-widest mt-6 shadow-lg shadow-red-500/30 hover:bg-red-700 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
       >
         Confirmar Asignación
+      </button>
+    </div>
+  </div>
+</div>
+<!-- AQUÍ SE CERRÓ CORRECTAMENTE EL MODAL DE EMERGENCIAS -->
+
+<!-- ========================================== -->
+<!-- MODAL ESPECIALIDADES (AHORA SÍ ESTÁ LIBRE AFUERA) -->
+<!-- ========================================== -->
+<div
+  *ngIf="mostrarModalEspecialidades()"
+  class="fixed inset-0 z-[100] flex items-center justify-center p-4"
+>
+  <div
+    class="absolute inset-0 bg-secondary/60 backdrop-blur-sm transition-opacity"
+    (click)="mostrarModalEspecialidades.set(false)"
+  ></div>
+
+  <div
+    class="bg-white rounded-[2.5rem] w-full max-w-md p-8 shadow-2xl relative z-10 animate-in fade-in zoom-in duration-300 flex flex-col"
+  >
+    <div class="flex justify-between items-center mb-6">
+      <div>
+        <h3 class="text-xl font-black text-slate-800 italic">Especialidades</h3>
+        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+          Filtros de servicio del Taller
+        </p>
+      </div>
+      <button
+        (click)="mostrarModalEspecialidades.set(false)"
+        class="text-slate-400 hover:text-red-500 transition-colors"
+      >
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+
+    <p class="text-xs text-slate-500 mb-4">
+      Selecciona las ramas automotrices que tu taller está capacitado para solucionar:
+    </p>
+
+    <div class="max-h-60 overflow-y-auto space-y-3 pr-2 mb-6 scrollbar-hide">
+      <div
+        *ngFor="let esp of misEspecialidadesTaller(); let i = index"
+        class="flex items-center gap-3 bg-slate-50 p-3.5 rounded-2xl border border-slate-100 hover:border-primary/20 transition-all cursor-pointer"
+        (click)="toggleEspecialidad(i)"
+      >
+        <input
+          type="checkbox"
+          [checked]="esp.activo"
+          (change)="$event.stopPropagation(); toggleEspecialidad(i)"
+          [id]="'check-' + esp.id"
+          class="w-4 h-4 rounded text-primary focus:ring-primary/20 border-slate-300 cursor-pointer"
+        />
+        <label
+          [for]="'check-' + esp.id"
+          class="text-sm font-bold text-slate-700 cursor-pointer flex-grow select-none"
+        >
+          {{ esp.nombre }}
+        </label>
+      </div>
+    </div>
+
+    <div class="space-y-2">
+      <button
+        (click)="guardarEspecialidadesTaller()"
+        class="w-full bg-primary text-white py-4 rounded-2xl font-black uppercase tracking-widest shadow-lg shadow-primary/30 hover:scale-[1.02] active:scale-95 transition-all"
+      >
+        Guardar Cambios
+      </button>
+      <button
+        (click)="mostrarModalEspecialidades.set(false)"
+        class="w-full bg-slate-100 text-slate-600 py-3 rounded-2xl font-bold uppercase tracking-wider text-xs hover:bg-slate-200 transition-all text-center"
+      >
+        Cancelar
       </button>
     </div>
   </div>

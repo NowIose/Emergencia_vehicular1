@@ -8,7 +8,7 @@ from datetime import date
 sys.path.append(os.path.join(os.getcwd(), "Backend"))
 
 from app.core.database import SessionLocal, engine
-from app.modules.usuarios.models import Taller, Cliente, PersonalTaller, UserRole, Usuario, Administrador
+from app.modules.usuarios.models import Taller, Cliente, PersonalTaller, UserRole, Usuario, Administrador, Especialidad
 from app.core.security import get_password_hash
 from app.modules.vehiculos.models import Vehiculo
 from app.modules.emergencias.models import Emergencia, DetalleEmergencia, Mensajeria, PrioridadEmergencia, EstadoEmergencia

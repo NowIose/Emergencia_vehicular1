@@ -28,6 +28,9 @@ export class DashboardComponent implements OnInit {
 
   userRole = signal<string>('');
   listaPersonal = signal<PersonalTaller[]>([]);
+  mostrarModalEspecialidades = signal<boolean>(false);
+  listaEspecialidadesGeneral = signal<any[]>([]); // Para el select/formulario de empleados
+  misEspecialidadesTaller = signal<any[]>([]); // EXCLUSIVO para el modal checklist del taller
   listaTalleres = signal<any[]>([]);
   emergenciasPendientes = signal<EmergenciaNotificacion['data'][]>([]);
 
@@ -71,6 +74,7 @@ export class DashboardComponent implements OnInit {
       this.cargarTalleres();
     } else {
       this.cargarPersonal();
+      this.cargarEspecialidades(); // <-- NUEVO: Cargamos las especialidades al iniciar
       this.cargarEmergenciasPendientes();
       this.cargarStats();
       this.cargarReviews();
@@ -184,7 +188,13 @@ export class DashboardComponent implements OnInit {
       error: (err) => console.error('Error al obtener el personal:', err),
     });
   }
-
+  cargarEspecialidades() {
+    this.http.get<any[]>(`${environment.apiUrl}/usuarios/especialidades`).subscribe({
+      // Guardamos en el signal general
+      next: (data) => this.listaEspecialidadesGeneral.set(data),
+      error: (err) => console.error('Error al cargar especialidades de la BD:', err),
+    });
+  }
   guardarPersonal() {
     if (this.personalForm.valid) {
       this.personalService.registrarPersonal(this.personalForm.value).subscribe({
@@ -260,7 +270,57 @@ export class DashboardComponent implements OnInit {
   seleccionarPersonal(event: any) {
     this.personalSeleccionadoId.set(Number(event.target.value));
   }
+  abrirModalEspecialidades() {
+    const token = localStorage.getItem('access_token');
+    const headers = new HttpHeaders({ Authorization: `Bearer ${token}` });
 
+    this.http
+      .get<any[]>(`${environment.apiUrl}/usuarios/taller/mis-especialidades`, { headers })
+      .subscribe({
+        next: (data) => {
+          // Guardamos en su propio signal exclusivo para el modal
+          this.misEspecialidadesTaller.set(data);
+          this.mostrarModalEspecialidades.set(true);
+        },
+        error: (err) => console.error('Error al cargar especialidades del taller:', err),
+      });
+  }
+
+  toggleEspecialidad(index: number) {
+    this.misEspecialidadesTaller.update((lista) => {
+      // Modificamos el signal correcto
+      lista[index].activo = !lista[index].activo;
+      return [...lista];
+    });
+  }
+
+  guardarEspecialidadesTaller() {
+    const token = localStorage.getItem('access_token');
+    const headers = new HttpHeaders({ Authorization: `Bearer ${token}` });
+
+    // Extraemos los IDs desde el signal del taller
+    const idsSeleccionados = this.misEspecialidadesTaller()
+      .filter((esp) => esp.activo)
+      .map((esp) => esp.id);
+
+    // CORRECCIÓN CRÍTICA: Cambiado de .post() a .put() y ajustada la URL exacta del Backend
+    this.http
+      .put(
+        `${environment.apiUrl}/usuarios/taller/mis-especialidades`,
+        { especialidades_ids: idsSeleccionados },
+        { headers },
+      )
+      .subscribe({
+        next: () => {
+          alert('¡Especialidades del taller actualizadas con éxito!');
+          this.mostrarModalEspecialidades.set(false);
+        },
+        error: (err) => {
+          console.error(err);
+          alert('Error al guardar las especialidades del taller');
+        },
+      });
+  }
   // ==========================================
   // LÓGICA DE ASIGNACIÓN CON SOPORTE OFFLINE
   // ==========================================
