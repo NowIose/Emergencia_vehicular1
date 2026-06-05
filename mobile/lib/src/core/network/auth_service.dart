@@ -9,21 +9,26 @@ class AuthService {
 
   Future<bool> registerUser(RegisterRequest data) async {
     try {
-      // 2. La ruta debe empezar directamente con /usuarios
       final response = await http.post(
-        Uri.parse(
-          '$_baseUrl/usuarios/register-cliente',
-        ), // <-- Cambiado de taller a cliente
+        Uri.parse('$_baseUrl/usuarios/register-cliente'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(data.toJson()),
       );
-
-      print("URL llamada: ${Uri.parse('$_baseUrl/usuarios/register-taller')}");
-      print("Status: ${response.statusCode}");
-
       return response.statusCode == 201 || response.statusCode == 200;
     } catch (e) {
-      print("Error: $e");
+      return false;
+    }
+  }
+
+  Future<bool> registerTaller(Map<String, dynamic> data) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/usuarios/register-taller'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(data),
+      );
+      return response.statusCode == 201 || response.statusCode == 200;
+    } catch (e) {
       return false;
     }
   }

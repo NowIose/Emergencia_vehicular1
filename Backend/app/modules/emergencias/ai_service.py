@@ -15,15 +15,23 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 # Modelo de Visión oficial confirmado
 MODELO_GEMINI = "gemini-2.5-flash"
 
-async def analizar_emergencia_con_ia(descripcion: str, fotos_urls: List[str] | None) -> Tuple[str, str]:
+async def analizar_emergencia_con_ia(descripcion: str, fotos_urls: List[str] | None) -> Tuple[str, str, str]:
     if not descripcion and not fotos_urls:
-        return "Sin datos suficientes para analizar.", "media"
+        return "Sin datos suficientes para analizar.", "media", "Mecánica General"
 
     prompt_sistema = """
     Eres un mecánico experto evaluando reportes de emergencias vehiculares. 
     Analiza la descripción del conductor y la imagen (si la hay).
-    1. Redacta un 'Diagnóstico Preliminar' técnico y muy breve para el taller. NO uses emojis no exageres con el diagnóstico.
-    2. Al final, clasifica la prioridad estrictamente como: 'media', 'alta' o 'baja'.
+    
+    Debes responder ESTRICTAMENTE en este formato de 3 líneas:
+    LINEA 1: Un 'Diagnóstico Preliminar' técnico y breve (máx 150 caracteres).
+    LINEA 2: Clasifica la prioridad estrictamente como: 'media', 'alta' o 'baja'.
+    LINEA 3: Clasifica la especialidad necesaria eligiendo UNA de estas: 'Mecánica General', 'Electricidad', 'Gomería', 'Chapa y Pintura', 'Aire Acondicionado'.
+    
+    Ejemplo de respuesta:
+    El vehículo presenta un sobrecalentamiento en el motor posiblemente por fuga de refrigerante.
+    alta
+    Mecánica General
     """
 
     try:
@@ -85,25 +93,37 @@ async def analizar_emergencia_con_ia(descripcion: str, fotos_urls: List[str] | N
                 respuesta_ia = data['choices'][0]['message']['content']
 
         # ==========================================
-        # 3. EXTRAER LA PRIORIDAD DEL TEXTO
+        # 3. EXTRAER DATOS DE LA RESPUESTA
         # ==========================================
-        respuesta_ia_limpia = respuesta_ia.lower().replace("*", "")
-        prioridad_calculada = "media" # Por defecto
+        lineas = [l.strip() for l in respuesta_ia.strip().split("\n") if l.strip()]
         
-        if "prioridad: alta" in respuesta_ia_limpia or "prioridad alta" in respuesta_ia_limpia:
-            prioridad_calculada = "alta"
-        elif "prioridad: baja" in respuesta_ia_limpia or "prioridad baja" in respuesta_ia_limpia:
-            prioridad_calculada = "baja"
+        diagnostico = lineas[0] if len(lineas) > 0 else "Diagnóstico no disponible."
+        prioridad_calculada = "media"
+        especialidad_detectada = "Mecánica General"
+
+        if len(lineas) >= 2:
+            prio = lineas[1].lower()
+            if "alta" in prio: prioridad_calculada = "alta"
+            elif "baja" in prio: prioridad_calculada = "baja"
+        
+        if len(lineas) >= 3:
+            especialidades_validas = ['Mecánica General', 'Electricidad', 'Gomería', 'Chapa y Pintura', 'Aire Acondicionado']
+            for esp in especialidades_validas:
+                if esp.lower() in lineas[2].lower():
+                    especialidad_detectada = esp
+                    break
 
         print("-" * 50)
-        print(f"✅ ANÁLISIS COMPLETADO (Prioridad IA: {prioridad_calculada})")
-        print(respuesta_ia)
+        print(f"✅ ANÁLISIS COMPLETADO")
+        print(f"Diagnóstico: {diagnostico}")
+        print(f"Prioridad: {prioridad_calculada}")
+        print(f"Especialidad: {especialidad_detectada}")
         print("-" * 50)
         
-        return respuesta_ia, prioridad_calculada
+        return diagnostico, prioridad_calculada, especialidad_detectada
 
     except Exception as e:
         print(f"❌ Error al conectar con la IA: {e}")
-        return "Análisis de IA temporalmente no disponible.", "media"
+        return "Análisis de IA temporalmente no disponible.", "media", "Mecánica General"
 
 

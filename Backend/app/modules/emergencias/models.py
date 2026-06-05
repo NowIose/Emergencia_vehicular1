@@ -26,6 +26,7 @@ class Emergencia(Base):
     descripcion = Column(String(500))
     # --- NUEVO CAMPO PARA LA IA ---
     diagnostico_ia = Column(String(2000), nullable=True, comment="Diagnóstico y evaluación generada por IA")
+    especialidad_ia = Column(String(100), nullable=True, comment="Especialidad detectada por la IA para filtrar talleres")
     prioridad = Column(SQLEnum(PrioridadEmergencia), default=PrioridadEmergencia.media)
     estado = Column(SQLEnum(EstadoEmergencia), default=EstadoEmergencia.espera)
     

@@ -25,6 +25,92 @@ def calculate_distance(lat1, lon1, lat2, lon2):
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
     return R * c
 
+@router.post("/pre-analizar", response_model=schemas.PreAnalisisResponse)
+async def pre_analizar_emergencia(req: schemas.PreAnalisisRequest, db: Session = Depends(get_db)):
+    """
+    Endpoint para que la App móvil obtenga un diagnóstico inicial y talleres cercanos
+    ANTES de crear la emergencia formalmente.
+    """
+    # 1. Análisis de IA
+    diagnostico, prioridad, especialidad = await analizar_emergencia_con_ia(req.descripcion, req.fotos)
+    
+    # 2. Parsear ubicación del cliente
+    try:
+        parts = req.ubicacion_cliente.split(",")
+        lat_c = float(parts[0].strip())
+        lon_c = float(parts[1].strip())
+    except:
+        raise HTTPException(status_code=400, detail="Ubicación de cliente inválida. Formato: 'lat,lng'")
+
+    # 3. Buscar talleres que coincidan con la especialidad
+    # Usamos la relación 'especialidades' del modelo Taller
+    talleres_db = db.query(Taller).all()
+    
+    sugeridos = []
+    for t in talleres_db:
+        if t.latitud and t.longitud:
+            dist = calculate_distance(lat_c, lon_c, t.latitud, t.longitud)
+            
+            # Filtro por Radio y Especialidad
+            if dist <= req.radio_km:
+                # Verificar si el taller tiene la especialidad detectada por IA
+                nombres_esp = [e.nombre.lower() for e in t.especialidades]
+                if especialidad.lower() in nombres_esp or not t.especialidades:
+                    sugeridos.append(schemas.TallerCercano(
+                        id=t.id,
+                        nombre_taller=t.nombre_taller,
+                        distancia_km=round(dist, 2),
+                        direccion=t.direccion,
+                        foto_perfil=t.foto_perfil,
+                        especialidades=[e.nombre for e in t.especialidades],
+                        latitud=t.latitud,
+                        longitud=t.longitud
+                    ))
+
+    # Ordenar por cercanía
+    sugeridos.sort(key=lambda x: x.distancia_km)
+
+    return schemas.PreAnalisisResponse(
+        diagnostico=diagnostico,
+        prioridad=prioridad,
+        especialidad_ia=especialidad,
+        talleres_sugeridos=sugeridos
+    )
+
+@router.post("/buscar-talleres", response_model=List[schemas.TallerCercano])
+async def buscar_talleres_cercanos(req: schemas.BuscarTalleresRequest, db: Session = Depends(get_db)):
+    """
+    Busca talleres por especialidad y radio dinámicamente.
+    """
+    try:
+        parts = req.ubicacion_cliente.split(",")
+        lat_c = float(parts[0].strip())
+        lon_c = float(parts[1].strip())
+    except:
+        raise HTTPException(status_code=400, detail="Ubicación inválida")
+
+    talleres_db = db.query(Taller).all()
+    sugeridos = []
+    
+    for t in talleres_db:
+        if t.latitud and t.longitud:
+            dist = calculate_distance(lat_c, lon_c, t.latitud, t.longitud)
+            if dist <= req.radio_km:
+                nombres_esp = [e.nombre.lower() for e in t.especialidades]
+                # Filtro por especialidad
+                if req.especialidad.lower() in nombres_esp or not t.especialidades:
+                    sugeridos.append(schemas.TallerCercano(
+                        id=t.id,
+                        nombre_taller=t.nombre_taller,
+                        distancia_km=round(dist, 2),
+                        direccion=t.direccion,
+                        foto_perfil=t.foto_perfil,
+                        especialidades=[e.nombre for e in t.especialidades]
+                    ))
+
+    sugeridos.sort(key=lambda x: x.distancia_km)
+    return sugeridos
+
 @router.post("/", response_model=schemas.EmergenciaResponse)
 async def create_emergencia(emergencia: schemas.EmergenciaCreate, fastapi_request: Request, db: Session = Depends(get_db), current_user: Usuario = Depends(get_current_user)):
     if current_user.rol.value != "cliente":
@@ -35,13 +121,14 @@ async def create_emergencia(emergencia: schemas.EmergenciaCreate, fastapi_reques
     if not vehiculo:
         raise HTTPException(status_code=404, detail="Vehículo no encontrado o no pertenece al cliente")
 
-    # 1. Crear y guardar la emergencia BÁSICA inmediatamente
+    # 1. Crear y guardar la emergencia
     db_emergencia = models.Emergencia(
         id_vehiculo=emergencia.id_vehiculo,
         ubicacion_real=emergencia.ubicacion_real,
         descripcion=emergencia.descripcion,
         prioridad=emergencia.prioridad,
-        fotos=emergencia.fotos
+        fotos=emergencia.fotos,
+        id_taller=emergencia.id_taller # Puede ser None si aún no elige
     )
     db.add(db_emergencia)
     db.commit()
@@ -50,23 +137,20 @@ async def create_emergencia(emergencia: schemas.EmergenciaCreate, fastapi_reques
     # 2. Registrar en bitácora
     registrar_evento(db, fastapi_request, "Solicitud de Emergencia", f"Cliente {current_user.email} solicitó ayuda para vehículo {vehiculo.placa}", usuario=current_user)
 
-    # --- NUEVO: LLAMADA A LA IA ---
-    # Llamamos a la IA sin bloquear eternamente. Si tarda mucho, el timeout del servicio saltará.
-    diagnostico, prioridad_sugerida = await analizar_emergencia_con_ia(db_emergencia.descripcion, db_emergencia.fotos)
+    # --- LLAMADA A LA IA (Para el diagnóstico definitivo en la DB) ---
+    diagnostico, prioridad_sugerida, especialidad_ia = await analizar_emergencia_con_ia(db_emergencia.descripcion, db_emergencia.fotos)
     
-    # Actualizamos la base de datos con los resultados de la IA
     db_emergencia.diagnostico_ia = diagnostico
+    db_emergencia.especialidad_ia = especialidad_ia
     
-    # Validamos que la prioridad devuelta por la IA sea correcta según tu Enum
     if prioridad_sugerida in [p.value for p in models.PrioridadEmergencia]:
         db_emergencia.prioridad = prioridad_sugerida
 
     db.commit()
     db.refresh(db_emergencia)
-    # ------------------------------
 
-    # 3. Broadcast a todos los talleres (Ahora incluye los datos de la IA)
-    await manager.broadcast_to_talleres({
+    # 3. Notificación WebSocket
+    payload = {
         "type": "NEW_EMERGENCY",
         "data": {
             "nro": db_emergencia.nro,
@@ -74,22 +158,27 @@ async def create_emergencia(emergencia: schemas.EmergenciaCreate, fastapi_reques
             "descripcion": db_emergencia.descripcion,
             "fotos": db_emergencia.fotos,
             "vehiculo": f"{vehiculo.marca} {vehiculo.modelo} ({vehiculo.placa})",
-            # Añadimos los campos de la IA al WebSocket del frontend de Angular
             "diagnostico_ia": db_emergencia.diagnostico_ia,
+            "especialidad_ia": db_emergencia.especialidad_ia,
             "prioridad": db_emergencia.prioridad.value if hasattr(db_emergencia.prioridad, 'value') else db_emergencia.prioridad
         }
-    })
+    }
+
+    if db_emergencia.id_taller:
+        payload["data"]["id_taller_destino"] = db_emergencia.id_taller
+        await manager.broadcast_to_talleres(payload)
+    else:
+        # Broadcast a todos (comportamiento antiguo/offline)
+        await manager.broadcast_to_talleres(payload)
     
     return db_emergencia
 
-
-# ---- WEBSOCKETS ----
 @router.websocket("/ws/taller")
 async def websocket_taller(websocket: WebSocket):
     await manager.connect_taller(websocket)
     try:
         while True:
-            data = await websocket.receive_text()
+            await websocket.receive_text()
     except WebSocketDisconnect:
         manager.disconnect_taller(websocket)
 
@@ -98,14 +187,32 @@ async def websocket_cliente(websocket: WebSocket, client_id: int):
     await manager.connect_client(websocket, client_id)
     try:
         while True:
-            data = await websocket.receive_text()
+            await websocket.receive_text()
     except WebSocketDisconnect:
         manager.disconnect_client(client_id)
 
 @router.get("/espera", response_model=List[schemas.EmergenciaResponse])
-def get_emergencias_espera(db: Session = Depends(get_db)):
-    # Los talleres consultan las emergencias que están esperando
-    return db.query(models.Emergencia).filter(models.Emergencia.estado == models.EstadoEmergencia.espera).all()
+def get_emergencias_espera(db: Session = Depends(get_db), current_user: Usuario = Depends(get_current_user)):
+    """
+    Los talleres consultan las emergencias que están esperando.
+    FILTRO: Solo ver emergencias asignadas específicamente a este taller (id_taller)
+    o aquellas que no tienen taller asignado aún (broadcast/fallback).
+    """
+    if current_user.rol.value not in ["admin_taller", "personal_taller"]:
+        raise HTTPException(status_code=403, detail="Solo talleres pueden ver emergencias en espera")
+
+    # Descubrir de qué taller es el usuario actual
+    taller_id = current_user.id
+    if current_user.rol.value == "personal_taller":
+        personal = db.query(PersonalTaller).filter(PersonalTaller.id == current_user.id).first()
+        if personal:
+            taller_id = personal.taller_id
+
+    # Filtrar: En espera Y (Sin taller O Mi taller)
+    query = db.query(models.Emergencia).filter(models.Emergencia.estado == models.EstadoEmergencia.espera)
+    query = query.filter((models.Emergencia.id_taller == None) | (models.Emergencia.id_taller == taller_id))
+    
+    return query.order_by(models.Emergencia.fecha_creacion.desc()).all()
 
 @router.get("/taller", response_model=List[schemas.EmergenciaResponse])
 def get_emergencias_taller(db: Session = Depends(get_db), current_user: Usuario = Depends(get_current_user)):
@@ -127,45 +234,6 @@ def get_emergencias_cliente(db: Session = Depends(get_db), current_user: Usuario
     
     return db.query(models.Emergencia).join(Vehiculo).filter(Vehiculo.cliente_id == current_user.id).order_by(models.Emergencia.fecha_creacion.desc()).all()
 
-# ---- ENDPOINTS ----
-@router.post("/", response_model=schemas.EmergenciaResponse)
-async def create_emergencia(emergencia: schemas.EmergenciaCreate, fastapi_request: Request, db: Session = Depends(get_db), current_user: Usuario = Depends(get_current_user)):
-    if current_user.rol.value != "cliente":
-        raise HTTPException(status_code=403, detail="Solo clientes pueden solicitar emergencias")
-        
-    # Validar que el vehiculo le pertenece
-    vehiculo = db.query(Vehiculo).filter(Vehiculo.id == emergencia.id_vehiculo, Vehiculo.cliente_id == current_user.id).first()
-    if not vehiculo:
-        raise HTTPException(status_code=404, detail="Vehículo no encontrado o no pertenece al cliente")
-
-    db_emergencia = models.Emergencia(
-        id_vehiculo=emergencia.id_vehiculo,
-        ubicacion_real=emergencia.ubicacion_real,
-        descripcion=emergencia.descripcion,
-        prioridad=emergencia.prioridad,
-        fotos=emergencia.fotos
-    )
-    db.add(db_emergencia)
-    db.commit()
-    db.refresh(db_emergencia)
-    
-    # Registrar en bitácora
-    registrar_evento(db, fastapi_request, "Solicitud de Emergencia", f"Cliente {current_user.email} solicitó ayuda para vehículo {vehiculo.placa}", usuario=current_user)
-
-    # Broadcast a todos los talleres
-    await manager.broadcast_to_talleres({
-        "type": "NEW_EMERGENCY",
-        "data": {
-            "nro": db_emergencia.nro,
-            "ubicacion_real": db_emergencia.ubicacion_real,
-            "descripcion": db_emergencia.descripcion,
-            "fotos": db_emergencia.fotos,
-            "vehiculo": f"{vehiculo.marca} {vehiculo.modelo} ({vehiculo.placa})"
-        }
-    })
-    
-    return db_emergencia
-
 @router.post("/{nro}/aceptar", response_model=schemas.EmergenciaResponse)
 async def aceptar_emergencia(fastapi_request: Request, nro: int, req: schemas.AceptarEmergenciaRequest, db: Session = Depends(get_db), current_user: Usuario = Depends(get_current_user)):
     if current_user.rol.value not in ["admin_taller", "personal_taller"]:
@@ -177,19 +245,16 @@ async def aceptar_emergencia(fastapi_request: Request, nro: int, req: schemas.Ac
     if emergencia.estado != models.EstadoEmergencia.espera:
         raise HTTPException(status_code=400, detail="Emergencia ya no está en espera")
 
-    # --- Descubrir de qué taller es el usuario actual ---
     taller_id = current_user.id
     if current_user.rol.value == "personal_taller":
         personal = db.query(PersonalTaller).filter(PersonalTaller.id == current_user.id).first()
         if personal:
             taller_id = personal.taller_id
             
-    # Asignamos la emergencia a este taller
     emergencia.id_taller = taller_id 
     emergencia.id_personal = req.id_personal
     emergencia.estado = models.EstadoEmergencia.atendiendo
     
-    # --- NUEVO: Obtener datos del Taller para distancia y ETA ---
     taller = db.query(Taller).filter(Taller.id == taller_id).first()
     nombre_taller = taller.nombre_taller if taller else "un taller"
     
@@ -203,20 +268,17 @@ async def aceptar_emergencia(fastapi_request: Request, nro: int, req: schemas.Ac
                 client_lat = float(parts[0].strip())
                 client_lon = float(parts[1].strip())
                 distancia_km = calculate_distance(taller.latitud, taller.longitud, client_lat, client_lon)
-                # Estimación simple: 2.5 min por km (tráfico) + 5 min base
                 minutos = int(distancia_km * 2.5 + 5)
                 tiempo_estimado = f"{minutos} min"
         except Exception as e:
             print(f"Error calculando distancia: {e}")
 
-    # Guardamos el tiempo estimado en DetalleEmergencia para persistencia
     detalle = db.query(models.DetalleEmergencia).filter(models.DetalleEmergencia.nro_emergencia == nro).first()
     if not detalle:
         detalle = models.DetalleEmergencia(nro_emergencia=nro)
         db.add(detalle)
     detalle.tiempo_llegada_estimado = tiempo_estimado
 
-    # --- MENSAJE AUTOMÁTICO ---
     personal_obj = db.query(PersonalTaller).filter(PersonalTaller.id == req.id_personal).first()
     nombre_mecanico = personal_obj.nombre_completo if personal_obj else "un mecánico"
     
@@ -229,18 +291,14 @@ async def aceptar_emergencia(fastapi_request: Request, nro: int, req: schemas.Ac
         mensaje=msg_texto
     )
     db.add(mensaje_auto)
-    # ---------------------------
 
     db.commit()
     db.refresh(emergencia)
 
-    # Registrar en bitácora
     registrar_evento(db, fastapi_request, "Emergencia Aceptada", f"Taller {nombre_taller} aceptó la emergencia Nro {nro}. Mecánico asignado: {nombre_mecanico}", usuario=current_user, id_taller=taller_id)
 
-    # Notificar al cliente
     vehiculo = db.query(Vehiculo).filter(Vehiculo.id == emergencia.id_vehiculo).first()
     if vehiculo:
-        # 1. Notificación de cambio de estado con info extra
         await manager.send_to_client(vehiculo.cliente_id, {
             "type": "STATUS_UPDATE",
             "data": {
@@ -251,7 +309,6 @@ async def aceptar_emergencia(fastapi_request: Request, nro: int, req: schemas.Ac
                 "eta": tiempo_estimado
             }
         })
-        # 2. Notificación de nuevo mensaje (el mensaje automático) para que aparezca en el chat
         await manager.send_to_client(vehiculo.cliente_id, {
             "type": "NEW_MESSAGE",
             "data": {
@@ -278,11 +335,9 @@ async def completar_emergencia(nro: int, fastapi_request: Request, db: Session =
     db.commit()
     db.refresh(emergencia)
 
-    # Registrar en bitácora
     taller_id = emergencia.id_taller
     registrar_evento(db, fastapi_request, "Emergencia Finalizada", f"Servicio completado para emergencia Nro {nro}", usuario=current_user, id_taller=taller_id)
 
-    # Notificar al cliente
     vehiculo = db.query(Vehiculo).filter(Vehiculo.id == emergencia.id_vehiculo).first()
     if vehiculo:
         await manager.send_to_client(vehiculo.cliente_id, {
@@ -307,7 +362,6 @@ async def actualizar_estado_generico(nro: int, req: schemas.EstadoUpdateRequest,
     estado_anterior = emergencia.estado.value if hasattr(emergencia.estado, 'value') else emergencia.estado
     emergencia.estado = req.estado
     
-    # --- NUEVO: Si cambian el estado a atendiendo por aquí, aseguramos que tenga id_taller ---
     taller_id = emergencia.id_taller
     if req.estado == "atendiendo" and emergencia.id_taller is None:
         taller_id = current_user.id
@@ -319,15 +373,12 @@ async def actualizar_estado_generico(nro: int, req: schemas.EstadoUpdateRequest,
         emergencia.id_taller = taller_id
         if current_user.rol.value == "personal_taller":
             emergencia.id_personal = current_user.id
-    # -----------------------------------------------------------------------------------------
 
     db.commit()
     db.refresh(emergencia)
 
-    # Registrar en bitácora
     registrar_evento(db, fastapi_request, "Cambio de Estado", f"Emergencia Nro {nro} cambió de {estado_anterior} a {req.estado}", usuario=current_user, id_taller=taller_id)
 
-    # Notificar al cliente vía WebSocket que su estado cambió
     vehiculo = db.query(Vehiculo).filter(Vehiculo.id == emergencia.id_vehiculo).first()
     if vehiculo:
         await manager.send_to_client(vehiculo.cliente_id, {
@@ -342,50 +393,23 @@ async def actualizar_estado_generico(nro: int, req: schemas.EstadoUpdateRequest,
 
 
 @router.get("/cliente/mis-emergencias", response_model=List[schemas.EmergenciaResponse])
-def obtener_mis_emergencias_cliente(
-    db: Session = Depends(get_db), 
-    current_user: Usuario = Depends(get_current_user)
-):
-    """ Devuelve todas las emergencias creadas por el cliente logueado """
-    # Buscamos los IDs de los vehículos que pertenecen al cliente
+def obtener_mis_emergencias_cliente(db: Session = Depends(get_db), current_user: Usuario = Depends(get_current_user)):
     vehiculos_ids = [v.id for v in db.query(Vehiculo).filter(Vehiculo.cliente_id == current_user.id).all()]
-    
-    # Buscamos las emergencias de esos vehículos, ordenadas por la más reciente
-    emergencias = db.query(models.Emergencia).filter(
-        models.Emergencia.id_vehiculo.in_(vehiculos_ids)
-    ).order_by(models.Emergencia.fecha_creacion.desc()).all()
-    
+    emergencias = db.query(models.Emergencia).filter(models.Emergencia.id_vehiculo.in_(vehiculos_ids)).order_by(models.Emergencia.fecha_creacion.desc()).all()
     return emergencias
 
 
-# ---- MENSAJERÍA ----
-# ==========================================
-# ---- ENDPOINTS DE MENSAJERÍA (CHAT) ----
-# ==========================================
-
 @router.post("/{nro}/mensajes", response_model=schemas.MensajeResponse)
-async def enviar_mensaje(
-    nro: int,
-    req: schemas.MensajeCreate,
-    db: Session = Depends(get_db),
-    current_user: Usuario = Depends(get_current_user)
-):
-    # 1. Validar emergencia y obtener el taller asignado
+async def enviar_mensaje(nro: int, req: schemas.MensajeCreate, db: Session = Depends(get_db), current_user: Usuario = Depends(get_current_user)):
     emergencia = db.query(models.Emergencia).filter(models.Emergencia.nro == nro).first()
     if not emergencia:
         raise HTTPException(status_code=404, detail="Emergencia no encontrada")
 
-    # 2. Guardar en DB
-    nuevo_mensaje = models.Mensajeria(
-        nro_emergencia=nro,
-        id_remitente=current_user.id,
-        mensaje=req.mensaje
-    )
+    nuevo_mensaje = models.Mensajeria(nro_emergencia=nro, id_remitente=current_user.id, mensaje=req.mensaje)
     db.add(nuevo_mensaje)
     db.commit()
     db.refresh(nuevo_mensaje)
 
-    # 3. Payload con información de filtrado
     ws_payload = {
         "type": "NEW_MESSAGE",
         "data": {
@@ -397,12 +421,9 @@ async def enviar_mensaje(
         }
     }
 
-    # 4. Enrutamiento Inteligente
     if current_user.rol.value == "cliente":
-        # Broadcast a los talleres; ellos filtrarán por id_taller en el front
         await manager.broadcast_to_talleres(ws_payload)
     else:
-        # Al cliente le llega directo
         vehiculo = db.query(Vehiculo).filter(Vehiculo.id == emergencia.id_vehiculo).first()
         if vehiculo:
             await manager.send_to_client(vehiculo.cliente_id, ws_payload)
@@ -412,48 +433,21 @@ async def enviar_mensaje(
 
 @router.get("/{nro}/mensajes", response_model=List[schemas.MensajeResponse])
 def obtener_historial_chat(nro: int, db: Session = Depends(get_db), current_user: Usuario = Depends(get_current_user)):
-    """ Devuelve todos los mensajes de una emergencia específica """
-    
-    mensajes = db.query(models.Mensajeria).filter(
-        models.Mensajeria.nro_emergencia == nro
-    ).order_by(models.Mensajeria.fecha_hora.asc()).all()
-    
-    return mensajes
+    return db.query(models.Mensajeria).filter(models.Mensajeria.nro_emergencia == nro).order_by(models.Mensajeria.fecha_hora.asc()).all()
 
 
 @router.put("/{nro}/mensajes/leer")
-async def marcar_mensajes_como_leidos(
-    nro: int,
-    db: Session = Depends(get_db),
-    current_user: Usuario = Depends(get_current_user)
-):
-    """ Cuando el usuario entra al chat, marca los mensajes del 'otro' como leídos """
-    
-    # Buscamos los mensajes de esta emergencia que NO sean míos y que NO estén leídos
-    mensajes_no_leidos = db.query(models.Mensajeria).filter(
-        models.Mensajeria.nro_emergencia == nro,
-        models.Mensajeria.id_remitente != current_user.id,
-        models.Mensajeria.leido == False
-    ).all()
+async def marcar_mensajes_como_leidos(nro: int, db: Session = Depends(get_db), current_user: Usuario = Depends(get_current_user)):
+    mensajes_no_leidos = db.query(models.Mensajeria).filter(models.Mensajeria.nro_emergencia == nro, models.Mensajeria.id_remitente != current_user.id, models.Mensajeria.leido == False).all()
 
     if not mensajes_no_leidos:
         return {"mensaje": "No hay mensajes nuevos por leer"}
 
-    # Actualizamos el estado a True (Leído)
     for msg in mensajes_no_leidos:
         msg.leido = True
-    
     db.commit()
 
-    # Notificamos por WebSocket que hubo una actualización de lectura 
-    # (Ideal para pintar el doble check azul en el Frontend)
-    ws_payload = {
-        "type": "MESSAGES_READ",
-        "data": {
-            "nro_emergencia": nro,
-            "leido_por": current_user.id
-        }
-    }
+    ws_payload = {"type": "MESSAGES_READ", "data": {"nro_emergencia": nro, "leido_por": current_user.id}}
 
     if current_user.rol.value == "cliente":
         await manager.broadcast_to_talleres(ws_payload)
@@ -464,39 +458,18 @@ async def marcar_mensajes_como_leidos(
             await manager.send_to_client(vehiculo.cliente_id, ws_payload)
 
     return {"mensaje": f"{len(mensajes_no_leidos)} mensajes marcados como leídos"}
+
 @router.get("/chats/activos", response_model=List[dict])
-def obtener_lista_chats_activos(
-    db: Session = Depends(get_db), 
-    current_user: Usuario = Depends(get_current_user)
-):
-    """ 
-    Lista todas las emergencias 'atendiendo' para el taller (Admin)
-    con contador de mensajes no leídos del cliente.
-    """
+def obtener_lista_chats_activos(db: Session = Depends(get_db), current_user: Usuario = Depends(get_current_user)):
     if current_user.rol.value != "admin_taller":
         raise HTTPException(status_code=403, detail="Solo el administrador del taller puede gestionar los chats")
 
-    # 1. Obtener las emergencias que este taller (Admin) está atendiendo
-    # Filtramos por id_taller para que el admin solo vea las suyas
-    emergencias = db.query(models.Emergencia).filter(
-        models.Emergencia.estado == models.EstadoEmergencia.atendiendo,
-        models.Emergencia.id_taller == current_user.id
-    ).all()
+    emergencias = db.query(models.Emergencia).filter(models.Emergencia.estado == models.EstadoEmergencia.atendiendo, models.Emergencia.id_taller == current_user.id).all()
     
     resultado = []
-    
     for e in emergencias:
-        # 2. Contar mensajes del cliente que el taller NO ha leído
-        no_leidos = db.query(models.Mensajeria).filter(
-            models.Mensajeria.nro_emergencia == e.nro,
-            models.Mensajeria.id_remitente != current_user.id, # El remitente NO es el taller
-            models.Mensajeria.leido == False
-        ).count()
-        
-        # 3. Obtener el último mensaje para previsualizar
-        ultimo_msg = db.query(models.Mensajeria).filter(
-            models.Mensajeria.nro_emergencia == e.nro
-        ).order_by(models.Mensajeria.fecha_hora.desc()).first()
+        no_leidos = db.query(models.Mensajeria).filter(models.Mensajeria.nro_emergencia == e.nro, models.Mensajeria.id_remitente != current_user.id, models.Mensajeria.leido == False).count()
+        ultimo_msg = db.query(models.Mensajeria).filter(models.Mensajeria.nro_emergencia == e.nro).order_by(models.Mensajeria.fecha_hora.desc()).first()
 
         resultado.append({
             "nro_emergencia": e.nro,
@@ -508,36 +481,20 @@ def obtener_lista_chats_activos(
             "id_taller": e.id_taller,
             "nombre_cliente": e.vehiculo.dueno.nombre if e.vehiculo and e.vehiculo.dueno else "Cliente Desconocido"
         })
-        
     return resultado
-        
-       
-    return resultado
-# --- Endpoint de Calificación ---
-from app.modules.usuarios.models import CalificacionTaller
-from sqlalchemy import Float
 
 @router.post("/{nro}/calificar")
-def calificar_emergencia(
-    nro: int, 
-    req: schemas.CalificarEmergenciaRequest, 
-    db: Session = Depends(get_db), 
-    current_user: Usuario = Depends(get_current_user)
-):
-    # 1. Validar que sea cliente
+def calificar_emergencia(nro: int, req: schemas.CalificarEmergenciaRequest, db: Session = Depends(get_db), current_user: Usuario = Depends(get_current_user)):
     if current_user.rol.value != "cliente":
         raise HTTPException(status_code=403, detail="Solo el cliente puede calificar")
 
-    # 2. Buscar la emergencia
     emergencia = db.query(models.Emergencia).filter(models.Emergencia.nro == nro).first()
     if not emergencia:
         raise HTTPException(status_code=404, detail="Emergencia no encontrada")
 
-    # 3. Validar que la emergencia pertenezca al usuario
     if emergencia.vehiculo.cliente_id != current_user.id:
         raise HTTPException(status_code=403, detail="No puedes calificar una emergencia que no es tuya")
 
-    # 4. Registrar la calificación
     nueva_calificacion = CalificacionTaller(
         cliente_id=current_user.id,
         taller_id=emergencia.id_taller,
@@ -545,9 +502,7 @@ def calificar_emergencia(
         puntuacion=req.puntuacion,
         comentario=req.comentario
     )
-    
     db.add(nueva_calificacion)
     db.commit()
     db.refresh(nueva_calificacion)
-    
     return {"message": "Calificación registrada correctamente"}

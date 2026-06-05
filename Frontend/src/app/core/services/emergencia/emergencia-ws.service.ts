@@ -11,6 +11,7 @@ export interface EmergenciaNotificacion {
     vehiculo: string;
     diagnostico_ia?: string;
     prioridad?: string;
+    id_taller_destino?: number; // NUEVO: Para filtrar en el dashboard
   };
 }
 

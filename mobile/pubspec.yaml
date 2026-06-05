@@ -53,6 +53,7 @@ dependencies:
   image_picker: ^1.2.1
   intl: ^0.20.2
   speech_to_text: ^7.3.0
+  mapbox_maps_flutter: ^2.0.0
 
 dev_dependencies:
   flutter_test:

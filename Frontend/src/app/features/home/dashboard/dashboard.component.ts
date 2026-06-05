@@ -80,15 +80,29 @@ export class DashboardComponent implements OnInit {
       this.cargarTalleres();
     } else {
       this.cargarPersonal();
-      this.cargarEspecialidades(); // <-- NUEVO: Cargamos las especialidades al iniciar
+      this.cargarEspecialidades();
       this.cargarEmergenciasPendientes();
       this.cargarStats();
       this.cargarReviews();
 
       this.emergenciaWs.emergencias$.subscribe((msg) => {
         if (msg.type === 'NEW_EMERGENCY') {
-          this.emergenciasPendientes.update((emergencias) => [msg.data, ...emergencias]);
-          this.serviciosPendientes = this.emergenciasPendientes().length;
+          // Extraer ID del usuario logueado de forma segura
+          const userDataJson = localStorage.getItem('user_data');
+          if (!userDataJson) return;
+          const userData = JSON.parse(userDataJson);
+          const myId = userData.id;
+          
+          const destino = msg.data.id_taller_destino;
+
+          // Si no tiene destino (broadcast) o el destino soy yo
+          if (!destino || Number(destino) === Number(myId)) {
+            console.log('🚨 Alerta aceptada para este taller:', msg.data);
+            this.emergenciasPendientes.update((emergencias) => [msg.data, ...emergencias]);
+            this.serviciosPendientes = this.emergenciasPendientes().length;
+          } else {
+            console.log('⏭️ Alerta ignorada (para otro taller):', destino);
+          }
         }
       });
       // ESCUCHAR CUANDO VUELVA EL WIFI / RED
@@ -231,7 +245,10 @@ export class DashboardComponent implements OnInit {
   }
 
   cargarEmergenciasPendientes() {
-    this.http.get<any[]>(`${environment.apiUrl}/emergencias/espera`).subscribe({
+    const token = localStorage.getItem('access_token');
+    const headers = new HttpHeaders({ Authorization: `Bearer ${token}` });
+
+    this.http.get<any[]>(`${environment.apiUrl}/emergencias/espera`, { headers }).subscribe({
       next: (data) => {
         // Mapear los datos del backend al formato que espera el frontend (data del WS)
         const mapeadas = data.map((e) => ({
@@ -244,6 +261,7 @@ export class DashboardComponent implements OnInit {
             : 'Vehículo desconocido',
           diagnostico_ia: e.diagnostico_ia,
           prioridad: e.prioridad,
+          id_taller_destino: e.id_taller // Aseguramos que venga si existe
         }));
         this.emergenciasPendientes.set(mapeadas);
         this.serviciosPendientes = mapeadas.length;

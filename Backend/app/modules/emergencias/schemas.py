@@ -10,6 +10,7 @@ class EmergenciaCreate(BaseModel):
     descripcion: str
     prioridad: str  # Opcional
     fotos: Optional[List[str]] = None
+    id_taller: Optional[int] = None # Nuevo: ID del taller seleccionado por el cliente
 
 class DetalleEmergenciaResponse(BaseModel):
     tiempo_llegada_estimado: Optional[str] = None
@@ -25,6 +26,7 @@ class EmergenciaResponse(BaseModel):
     estado: str
     fotos: Optional[List[str]] = None
     diagnostico_ia: Optional[str] = None
+    especialidad_ia: Optional[str] = None
     fecha_creacion: datetime
     id_vehiculo: int
     id_taller: Optional[int] = None
@@ -40,7 +42,6 @@ class AceptarEmergenciaRequest(BaseModel):
     id_personal: int
 
 class EstadoUpdateRequest(BaseModel):
-    estado: str
     estado: str
 
 # --- Schemas de Mensajería ---
@@ -70,8 +71,35 @@ class ReporteEmergenciaResponse(BaseModel):
 
     class Config:
         from_attributes = True
+class TallerCercano(BaseModel):
+    id: int
+    nombre_taller: str
+    distancia_km: float
+    direccion: Optional[str] = None
+    foto_perfil: Optional[str] = None
+    especialidades: List[str]
+    latitud: Optional[float] = None
+    longitud: Optional[float] = None
+
+class PreAnalisisResponse(BaseModel):
+    diagnostico: str
+    prioridad: str
+    especialidad_ia: str
+    talleres_sugeridos: List[TallerCercano]
+
+class PreAnalisisRequest(BaseModel):
+    descripcion: str
+    ubicacion_cliente: str # "lat,lng"
+    fotos: Optional[List[str]] = None
+    radio_km: float = 5.0 # Por defecto 5km
+
 class CalificarEmergenciaRequest(BaseModel):
     puntuacion: float
     comentario: Optional[str] = None
     class Config:
         from_attributes = True
+
+class BuscarTalleresRequest(BaseModel):
+    ubicacion_cliente: str # "lat,lng"
+    especialidad: str
+    radio_km: float

@@ -8,6 +8,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http_parser/http_parser.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
+// NUEVO IMPORT QUIRÚRGICO
+import '../../../emergencies/presentation/pages/workshop_selection_screen.dart';
 
 final String _baseUrl = dotenv.env['API_URL'] ?? 'http://192.168.1.15:8000';
 
@@ -42,20 +44,20 @@ class _EmergencyBubbleState extends State<EmergencyBubble> {
   final ImagePicker _picker = ImagePicker();
   List<File> _fotosTomadas = [];
   bool _isUploadingFotos = false;
-  // --- NUEVO: Variables para Speech-to-Text ---
+  // --- Variables para Speech-to-Text ---
   final stt.SpeechToText _speechToText = stt.SpeechToText();
   bool _speechEnabled = false;
   String _lastWords = '';
+
   @override
   void initState() {
     super.initState();
     _vehiculoSeleccionado = widget.idVehiculoSeleccionado;
-    _initSpeech(); // --- NUEVO ---
-    // Intentar sincronizar alertas pendientes guardadas en offline al arrancar la pantalla
+    _initSpeech();
+    // Sincronizar alertas pendientes guardadas en offline
     _sincronizarEmergenciasPendientes();
   }
 
-  // --- NUEVO: Función para inicializar el micrófono ---
   void _initSpeech() async {
     _speechEnabled = await _speechToText.initialize(
       onError: (val) => print('Error en S2T: $val'),
@@ -83,7 +85,9 @@ class _EmergencyBubbleState extends State<EmergencyBubble> {
         setModalState(() {
           _misVehiculos = jsonDecode(response.body);
           if (_misVehiculos.isNotEmpty && _vehiculoSeleccionado == null) {
-            _vehiculoSeleccionado = _misVehiculos.first['id'];
+             // Aseguramos que el ID sea int
+            var firstId = _misVehiculos.first['id'];
+            _vehiculoSeleccionado = firstId is int ? firstId : int.tryParse(firstId.toString());
           }
         });
       }
@@ -111,230 +115,14 @@ class _EmergencyBubbleState extends State<EmergencyBubble> {
     }
   }
 
-  // 3. Subir fotos al backend (que las manda a Cloudinary)
+  // 3. Subir fotos al backend
   Future<List<String>> _subirFotos() async {
     List<String> urls = [];
     final urlUpload = Uri.parse('$_baseUrl/usuarios/upload-image');
-
     const storage = FlutterSecureStorage();
     String? token = await storage.read(key: 'jwt_token');
 
     for (File foto in _fotosTomadas) {
-      var request = http.MultipartRequest('POST', urlUpload);
-
-      // --- CAMBIO AQUÍ: Forzar el tipo MIME a image/jpeg ---
-      request.files.add(
-        await http.MultipartFile.fromPath(
-          'file',
-          foto.path,
-          contentType: MediaType(
-            'image',
-            'jpeg',
-          ), // Le dice a FastAPI que es una imagen segura
-        ),
-      );
-
-      request.fields['folder'] = 'emergencia_vehicular/emergencias';
-
-      request.headers.addAll({
-        'Accept': 'application/json',
-        if (token != null) 'Authorization': 'Bearer $token',
-      });
-
-      try {
-        var response = await request.send();
-        var respStr = await response.stream.bytesToString();
-
-        if (response.statusCode == 201 || response.statusCode == 200) {
-          var jsonResp = jsonDecode(respStr);
-          urls.add(jsonResp['url']);
-        } else {
-          debugPrint("❌ Error al subir foto. Status: ${response.statusCode}");
-          debugPrint("❌ Body de respuesta: $respStr");
-        }
-      } catch (e) {
-        debugPrint("❌ Excepción de red al subir foto: $e");
-      }
-    }
-    return urls;
-  }
-
-  // 4. Función para obtener GPS
-  Future<void> _obtenerUbicacion() async {
-    bool serviceEnabled;
-    LocationPermission permission;
-
-    serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Por favor habilita el GPS')),
-      );
-      return;
-    }
-
-    permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        return;
-      }
-    }
-
-    Position position = await Geolocator.getCurrentPosition();
-    setState(() {
-      // Guardamos la ubicación en formato "Latitud, Longitud"
-      _ubicacionActual = '${position.latitude}, ${position.longitude}';
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('📍 Ubicación capturada con éxito')),
-    );
-  }
-
-  // 5. Función para enviar al Backend (MODIFICADA CON MANEJO OFFLINE)
-  Future<void> _enviarEmergencia(BuildContext context) async {
-    if (_descripcionController.text.isEmpty || _ubicacionActual == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Añade una descripción y tu ubicación')),
-      );
-      return;
-    }
-    if (_vehiculoSeleccionado == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Por favor selecciona un vehículo')),
-      );
-      return;
-    }
-
-    setState(() => _isLoading = true);
-
-    try {
-      // Intentar procesar flujo normal (Online)
-      List<String> fotosUrls = [];
-      if (_fotosTomadas.isNotEmpty) {
-        setState(() => _isUploadingFotos = true);
-        fotosUrls = await _subirFotos();
-        setState(() => _isUploadingFotos = false);
-      }
-
-      const storage = FlutterSecureStorage();
-      String? token = await storage.read(key: 'jwt_token');
-      final url = Uri.parse('$_baseUrl/emergencias/');
-
-      final response = await http
-          .post(
-            url,
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-              if (token != null) 'Authorization': 'Bearer $token',
-            },
-            body: jsonEncode({
-              "id_vehiculo": _vehiculoSeleccionado,
-              "ubicacion_real": _ubicacionActual,
-              "descripcion": _descripcionController.text,
-              "prioridad": "alta",
-              "fotos": fotosUrls,
-            }),
-          )
-          .timeout(
-            const Duration(seconds: 10),
-          ); // Timeout para forzar captura si la red está colgada
-
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        if (mounted) Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('🚨 Alerta enviada exitosamente')),
-        );
-        _descripcionController.clear();
-        _ubicacionActual = null;
-        _fotosTomadas.clear();
-
-        // Aprovechar que recuperó señal para vaciar cualquier otra alerta pendiente previa
-        _sincronizarEmergenciasPendientes();
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error ${response.statusCode}: ${response.body}'),
-          ),
-        );
-      }
-    } on SocketException catch (e) {
-      // 🚨 PRINT DE CONTROL
-      print("🚨 INSTANCIA DETECTADA: SocketException (Celular sin internet).");
-      print("Detalle del error: $e");
-      // CAPTURA DE FALTA DE INTERNET: Guardar localmente de inmediato
-      await _guardarEmergenciaLocal();
-    } catch (e) {
-      // 🚨 PRINT DE CONTROL
-      print("🚨 INSTANCIA DETECTADA: Otro tipo de error de red.");
-      print("Detalle: $e");
-      // Otras excepciones de red (ej. Tiempos de espera agotados)
-      await _guardarEmergenciaLocal();
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  // --- NUEVA FUNCIÓN: Guarda la emergencia localmente si no hay internet ---
-  Future<void> _guardarEmergenciaLocal() async {
-    try {
-      const storage = FlutterSecureStorage();
-      String? pendientesStr = await storage.read(key: 'emergencias_pendientes');
-      List<dynamic> pendientes = [];
-
-      if (pendientesStr != null && pendientesStr.isNotEmpty) {
-        pendientes = jsonDecode(pendientesStr);
-      }
-
-      // Estructuramos el payload offline guardando las rutas de los archivos locales
-      Map<String, dynamic> nuevaEmergenciaOffline = {
-        "id_vehiculo": _vehiculoSeleccionado,
-        "ubicacion_real": _ubicacionActual,
-        "descripcion": _descripcionController.text,
-        "prioridad": "alta",
-        "fotos_locales": _fotosTomadas.map((f) => f.path).toList(),
-        "fecha_creacion": DateTime.now().toIso8601String(),
-      };
-
-      pendientes.add(nuevaEmergenciaOffline);
-      await storage.write(
-        key: 'emergencias_pendientes',
-        value: jsonEncode(pendientes),
-      );
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              '📴 Sin internet. Auxilio guardado localmente, se enviará al conectar.',
-            ),
-            backgroundColor: Colors.orange,
-            duration: Duration(seconds: 5),
-          ),
-        );
-        Navigator.pop(context);
-        _descripcionController.clear();
-        _ubicacionActual = null;
-        _fotosTomadas.clear();
-      }
-    } catch (e) {
-      debugPrint("Error al guardar caché offline: $e");
-    }
-  }
-
-  // --- NUEVA FUNCIÓN: Sube fotos almacenadas localmente durante el modo offline ---
-  Future<List<String>> _subirFotosOffline(List<dynamic> paths) async {
-    List<String> urls = [];
-    final urlUpload = Uri.parse('$_baseUrl/usuarios/upload-image');
-    const storage = FlutterSecureStorage();
-    String? token = await storage.read(key: 'jwt_token');
-
-    for (dynamic path in paths) {
-      File foto = File(path.toString());
-      if (!await foto.exists())
-        continue; // Si el archivo temporal ya no existe, lo salta
-
       var request = http.MultipartRequest('POST', urlUpload);
       request.files.add(
         await http.MultipartFile.fromPath(
@@ -357,104 +145,275 @@ class _EmergencyBubbleState extends State<EmergencyBubble> {
           urls.add(jsonResp['url']);
         }
       } catch (e) {
-        debugPrint("Error subiendo foto en background: $e");
-        rethrow; // Propaga el error para detener la sincronización de este registro si falla la red
+        debugPrint("Error subiendo foto: $e");
       }
     }
     return urls;
   }
 
-  // --- NUEVA FUNCIÓN: Proceso de sincronización en segundo plano ---
-  Future<void> _sincronizarEmergenciasPendientes() async {
-    const storage = FlutterSecureStorage();
-    String? pendientesStr = await storage.read(key: 'emergencias_pendientes');
+  // 4. Función para obtener GPS
+  Future<void> _obtenerUbicacion() async {
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Por favor habilita el GPS')));
+      return;
+    }
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) return;
+    }
+    Position position = await Geolocator.getCurrentPosition();
+    setState(() {
+      _ubicacionActual = '${position.latitude}, ${position.longitude}';
+    });
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('📍 Ubicación capturada con éxito')));
+  }
 
-    if (pendientesStr == null ||
-        pendientesStr.isEmpty ||
-        pendientesStr == '[]') {
+  // 5. FUNCIÓN ENVIAR (MODIFICADA QUIRÚRGICAMENTE PARA PRE-ANÁLISIS)
+  Future<void> _enviarEmergencia(BuildContext context) async {
+    if (_descripcionController.text.isEmpty || _ubicacionActual == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Añade descripción y ubicación')));
+      return;
+    }
+    if (_vehiculoSeleccionado == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Selecciona un vehículo')));
       return;
     }
 
-    debugPrint(
-      "🔄 Detectadas emergencias offline pendientes por sincronizar...",
-    );
-    List<dynamic> pendientes = jsonDecode(pendientesStr);
-    List<dynamic> noEnviados = [];
+    setState(() => _isLoading = true);
 
+    try {
+      List<String> fotosUrls = [];
+      if (_fotosTomadas.isNotEmpty) {
+        setState(() => _isUploadingFotos = true);
+        fotosUrls = await _subirFotos();
+        setState(() => _isUploadingFotos = false);
+      }
+
+      const storage = FlutterSecureStorage();
+      String? token = await storage.read(key: 'jwt_token');
+
+      // PASO 1: LLAMAR AL NUEVO ENDPOINT DE PRE-ANÁLISIS
+      final urlPre = Uri.parse('$_baseUrl/emergencias/pre-analizar');
+      final responsePre = await http.post(
+        urlPre,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          "descripcion": _descripcionController.text,
+          "ubicacion_cliente": _ubicacionActual,
+          "fotos": fotosUrls,
+          "radio_km": 2.0 
+        }),
+      ).timeout(const Duration(seconds: 15));
+
+      if (responsePre.statusCode == 200) {
+        final dataPre = jsonDecode(responsePre.body);
+        
+        if (mounted) {
+          // PASO 2: NAVEGAR AL MAPA DE SELECCIÓN (MAPBOX)
+          final int? tallerSeleccionadoId = await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => WorkshopSelectionScreen(
+                diagnostico: dataPre['diagnostico'],
+                prioridad: dataPre['prioridad'],
+                especialidad: dataPre['especialidad_ia'],
+                talleres: dataPre['talleres_sugeridos'],
+                ubicacionCliente: _ubicacionActual!,
+              ),
+            ),
+          );
+
+          // PASO 3: SI SELECCIONÓ TALLER, CREAR EMERGENCIA DEFINITIVA
+          if (tallerSeleccionadoId != null) {
+            final urlCreate = Uri.parse('$_baseUrl/emergencias/');
+            final responseFinal = await http.post(
+              urlCreate,
+              headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                if (token != null) 'Authorization': 'Bearer $token',
+              },
+              body: jsonEncode({
+                "id_vehiculo": _vehiculoSeleccionado,
+                "ubicacion_real": _ubicacionActual,
+                "descripcion": _descripcionController.text,
+                "prioridad": dataPre['prioridad'],
+                "fotos": fotosUrls,
+                "id_taller": tallerSeleccionadoId
+              }),
+            );
+
+            if (responseFinal.statusCode >= 200 && responseFinal.statusCode < 300) {
+              if (mounted) Navigator.pop(context); 
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('🚨 Alerta enviada al taller con éxito')));
+              _limpiarFormulario();
+            }
+          }
+        }
+      } else {
+        // FALLBACK: Si falla el pre-análisis (Online pero con error de IA), enviamos el flujo normal (broadcast)
+        await _enviarFlujoDirecto(fotosUrls);
+      }
+    } on SocketException {
+      // CAPTURA OFFLINE: Sigue funcionando igual que antes
+      await _guardarEmergenciaLocal();
+    } catch (e) {
+      debugPrint("Error en envío: $e");
+      await _guardarEmergenciaLocal();
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _limpiarFormulario() {
+    _descripcionController.clear();
+    _ubicacionActual = null;
+    _fotosTomadas.clear();
+  }
+
+  // El flujo original de envío directo que ya tenías
+  Future<void> _enviarFlujoDirecto(List<String> fotosUrls) async {
+    const storage = FlutterSecureStorage();
     String? token = await storage.read(key: 'jwt_token');
     final url = Uri.parse('$_baseUrl/emergencias/');
 
-    for (var emergencia in pendientes) {
-      try {
-        List<String> fotosUrls = [];
-        List<dynamic> fotosLocales = emergencia['fotos_locales'] ?? [];
+    final response = await http.post(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        if (token != null) 'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        "id_vehiculo": _vehiculoSeleccionado,
+        "ubicacion_real": _ubicacionActual,
+        "descripcion": _descripcionController.text,
+        "prioridad": "alta",
+        "fotos": fotosUrls,
+      }),
+    ).timeout(const Duration(seconds: 10));
 
-        // 1. Subir las fotos locales si existen rutas guardadas
-        if (fotosLocales.isNotEmpty) {
-          fotosUrls = await _subirFotosOffline(fotosLocales);
-        }
-
-        // 2. Enviar el reporte definitivo al backend
-        final response = await http.post(
-          url,
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            if (token != null) 'Authorization': 'Bearer $token',
-          },
-          body: jsonEncode({
-            "id_vehiculo": emergencia["id_vehiculo"],
-            "ubicacion_real": emergencia["ubicacion_real"],
-            "descripcion": emergencia["descripcion"],
-            "prioridad": emergencia["prioridad"],
-            "fotos": fotosUrls,
-          }),
-        );
-
-        if (response.statusCode >= 200 && response.statusCode < 300) {
-          debugPrint("✅ Emergencia offline sincronizada correctamente.");
-        } else {
-          // Si el servidor responde con error de validación, mantenlo para no perder el dato
-          noEnviados.add(emergencia);
-        }
-      } catch (e) {
-        // Si vuelve a fallar la conexión, conservamos la emergencia en la cola
-        debugPrint(
-          "❌ Falló el intento de sincronización local (sigue sin red): $e",
-        );
-        noEnviados.add(emergencia);
-        break; // Detiene el bucle para evitar reintentos innecesarios en este ciclo
-      }
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      if (mounted) Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('🚨 Alerta enviada exitosamente')));
+      _limpiarFormulario();
+      _sincronizarEmergenciasPendientes();
     }
-
-    // Actualizar el almacenamiento con lo que quedó pendiente o vacío si todo se envió
-    await storage.write(
-      key: 'emergencias_pendientes',
-      value: jsonEncode(noEnviados),
-    );
   }
 
-  // --- NUEVO: Iniciar escucha ---
-  // Recibe setModalState para poder actualizar la UI del BottomSheet (cambiar el ícono a rojo)
+  // LÓGICA OFFLINE (RESTAURADA TOTALMENTE)
+  Future<void> _guardarEmergenciaLocal() async {
+    try {
+      const storage = FlutterSecureStorage();
+      String? pendientesStr = await storage.read(key: 'emergencias_pendientes');
+      List<dynamic> pendientes = (pendientesStr != null) ? jsonDecode(pendientesStr) : [];
+
+      pendientes.add({
+        "id_vehiculo": _vehiculoSeleccionado,
+        "ubicacion_real": _ubicacionActual,
+        "descripcion": _descripcionController.text,
+        "prioridad": "alta",
+        "fotos_locales": _fotosTomadas.map((f) => f.path).toList(),
+        "fecha_creacion": DateTime.now().toIso8601String(),
+      });
+
+      await storage.write(key: 'emergencias_pendientes', value: jsonEncode(pendientes));
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('📴 Sin internet. Auxilio guardado localmente.'),
+          backgroundColor: Colors.orange,
+        ));
+        Navigator.pop(context);
+        _limpiarFormulario();
+      }
+    } catch (e) {
+      debugPrint("Error al guardar caché offline: $e");
+    }
+  }
+
+  Future<void> _sincronizarEmergenciasPendientes() async {
+    const storage = FlutterSecureStorage();
+    String? pendientesStr = await storage.read(key: 'emergencias_pendientes');
+    if (pendientesStr == null || pendientesStr == '[]') return;
+
+    List<dynamic> pendientes = jsonDecode(pendientesStr);
+    List<dynamic> noEnviados = [];
+    String? token = await storage.read(key: 'jwt_token');
+
+    for (var em in pendientes) {
+      try {
+        List<String> urls = await _subirFotosOffline(em['fotos_locales'] ?? []);
+        final resp = await http.post(
+          Uri.parse('$_baseUrl/emergencias/'),
+          headers: {'Content-Type': 'application/json', if (token != null) 'Authorization': 'Bearer $token'},
+          body: jsonEncode({
+            "id_vehiculo": em["id_vehiculo"],
+            "ubicacion_real": em["ubicacion_real"],
+            "descripcion": em["descripcion"],
+            "prioridad": em["prioridad"],
+            "fotos": urls,
+          }),
+        );
+        if (resp.statusCode >= 200 && resp.statusCode < 300) {
+          debugPrint("✅ Offline sincronizado");
+        } else {
+          noEnviados.add(em);
+        }
+      } catch (e) {
+        noEnviados.add(em);
+        break;
+      }
+    }
+    await storage.write(key: 'emergencias_pendientes', value: jsonEncode(noEnviados));
+  }
+
+  Future<List<String>> _subirFotosOffline(List<dynamic> paths) async {
+    List<String> urls = [];
+    final urlUpload = Uri.parse('$_baseUrl/usuarios/upload-image');
+    const storage = FlutterSecureStorage();
+    String? token = await storage.read(key: 'jwt_token');
+
+    for (dynamic path in paths) {
+      File foto = File(path.toString());
+      if (!await foto.exists()) continue;
+
+      var request = http.MultipartRequest('POST', urlUpload);
+      request.files.add(await http.MultipartFile.fromPath('file', foto.path, contentType: MediaType('image', 'jpeg')));
+      request.fields['folder'] = 'emergencia_vehicular/emergencias';
+      request.headers.addAll({'Accept': 'application/json', if (token != null) 'Authorization': 'Bearer $token'});
+
+      try {
+        var response = await request.send();
+        var respStr = await response.stream.bytesToString();
+        if (response.statusCode == 201 || response.statusCode == 200) {
+          urls.add(jsonDecode(respStr)['url']);
+        }
+      } catch (e) { rethrow; }
+    }
+    return urls;
+  }
+
+  // SPEECH TO TEXT (RESTAURADO TOTALMENTE)
   void _startListening(StateSetter setModalState) async {
     await _speechToText.listen(
       onResult: (result) {
         setModalState(() {
-          // Actualizamos el campo de texto con lo que va escuchando
           _descripcionController.text = result.recognizedWords;
-          // Coloca el cursor al final del texto
-          _descripcionController.selection = TextSelection.fromPosition(
-            TextPosition(offset: _descripcionController.text.length),
-          );
+          _descripcionController.selection = TextSelection.fromPosition(TextPosition(offset: _descripcionController.text.length));
         });
       },
-      localeId:
-          'es_ES', // Fuerza el idioma a español (puedes ajustarlo si prefieres otro)
+      localeId: 'es_ES',
     );
     setModalState(() {});
   }
 
-  // --- NUEVO: Detener escucha ---
   void _stopListening(StateSetter setModalState) async {
     await _speechToText.stop();
     setModalState(() {});
@@ -465,72 +424,43 @@ class _EmergencyBubbleState extends State<EmergencyBubble> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (context) {
-        // Usamos StatefulBuilder para poder actualizar la UI dentro del Modal (ej. mostrar un loader)
-        // Cargar vehículos al abrir el modal
-
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setModalState) {
-            // 1. CARGA INICIAL: Solo si la lista de vehículos está vacía
             if (_misVehiculos.isEmpty) {
               _cargarMisVehiculos(setModalState);
             }
 
             return Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom,
-                left: 24,
-                right: 24,
-                top: 24,
-              ),
+              padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 24, right: 24, top: 24),
               child: SingleChildScrollView(
-                // Añadido ScrollView para evitar overflow con el teclado
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Título
-                    const Text(
-                      'Solicitar Auxilio',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.red,
-                      ),
-                    ),
+                    const Text('Solicitar Auxilio', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.red)),
                     const SizedBox(height: 16),
 
-                    // Selector de Vehículo
+                    // Selector de Vehículo (FIX Dropdown Error)
                     if (_misVehiculos.isNotEmpty)
                       DropdownButtonFormField<int>(
                         decoration: InputDecoration(
                           filled: true,
                           fillColor: Colors.grey.shade100,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
-                          ),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                           hintText: 'Selecciona tu vehículo',
                         ),
-                        value:
-                            _misVehiculos.any(
-                              (v) => v['id'] == _vehiculoSeleccionado,
-                            )
-                            ? _vehiculoSeleccionado
-                            : null,
+                        // FIX: Asegurar que el value coincida exactamente con uno de los IDs de los items
+                        value: _misVehiculos.any((v) {
+                          final id = v['id'] is int ? v['id'] : int.tryParse(v['id'].toString());
+                          return id == _vehiculoSeleccionado;
+                        }) ? _vehiculoSeleccionado : null,
                         items: _misVehiculos.map((v) {
+                          final int? id = v['id'] is int ? v['id'] : int.tryParse(v['id'].toString());
                           return DropdownMenuItem<int>(
-                            // Asegúrate de que v['id'] sea realmente un int.
-                            // Si viene como String, cámbialo a: int.tryParse(v['id'].toString())
-                            value: v['id'] is int
-                                ? v['id']
-                                : int.tryParse(v['id'].toString()),
-                            child: Text(
-                              '${v['marca']} ${v['modelo']} - ${v['placa']}',
-                            ),
+                            value: id,
+                            child: Text('${v['marca']} ${v['modelo']} - ${v['placa']}'),
                           );
                         }).toList(),
                         onChanged: (val) {
@@ -540,59 +470,22 @@ class _EmergencyBubbleState extends State<EmergencyBubble> {
                         },
                       )
                     else
-                      const Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(8.0),
-                          child: CircularProgressIndicator(),
-                        ),
-                      ),
+                      const Center(child: Padding(padding: EdgeInsets.all(8.0), child: CircularProgressIndicator())),
 
                     const SizedBox(height: 16),
 
-                    // --- MODIFICADO: TextField con botón de micrófono ---
                     TextField(
                       controller: _descripcionController,
                       maxLines: 3,
                       decoration: InputDecoration(
-                        hintText: _speechToText.isListening
-                            ? 'Escuchando...'
-                            : '¿Qué le ocurrió a tu vehículo?',
-                        filled: true,
-                        fillColor: Colors.grey.shade200,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
-                        // Añadimos el ícono del micrófono a la derecha
+                        hintText: _speechToText.isListening ? 'Escuchando...' : '¿Qué le ocurrió a tu vehículo?',
+                        filled: true, fillColor: Colors.grey.shade200,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                         suffixIcon: IconButton(
-                          icon: Icon(
-                            _speechToText.isListening
-                                ? Icons.mic
-                                : Icons.mic_none,
-                            color: _speechToText.isListening
-                                ? Colors.red
-                                : Colors.grey.shade600,
-                            size: 28,
-                          ),
+                          icon: Icon(_speechToText.isListening ? Icons.mic : Icons.mic_none, color: _speechToText.isListening ? Colors.red : Colors.grey.shade600, size: 28),
                           onPressed: () {
-                            // Verificamos si los permisos fueron concedidos
-                            if (!_speechEnabled) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'El reconocimiento de voz no está disponible.',
-                                  ),
-                                ),
-                              );
-                              return;
-                            }
-
-                            // Alternar entre escuchar y detener
-                            if (_speechToText.isNotListening) {
-                              _startListening(setModalState);
-                            } else {
-                              _stopListening(setModalState);
-                            }
+                            if (!_speechEnabled) return;
+                            if (_speechToText.isNotListening) { _startListening(setModalState); } else { _stopListening(setModalState); }
                           },
                         ),
                       ),
@@ -601,43 +494,13 @@ class _EmergencyBubbleState extends State<EmergencyBubble> {
 
                     Row(
                       children: [
-                        // Botón de cámara
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: () => _tomarFoto(setModalState),
-                            icon: const Icon(Icons.camera_alt),
-                            label: Text('Foto (${_fotosTomadas.length}/3)'),
-                          ),
-                        ),
+                        Expanded(child: OutlinedButton.icon(onPressed: () => _tomarFoto(setModalState), icon: const Icon(Icons.camera_alt), label: Text('Foto (${_fotosTomadas.length}/3)'))),
                         const SizedBox(width: 12),
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: () async {
-                              await _obtenerUbicacion();
-                              // Refresca el modal si necesitas cambiar el color del botón al tener GPS
-                              setModalState(() {});
-                            },
-                            icon: Icon(
-                              _ubicacionActual != null
-                                  ? Icons.check_circle
-                                  : Icons.location_on,
-                              size: 20,
-                              color: _ubicacionActual != null
-                                  ? Colors.green
-                                  : null,
-                            ),
-                            label: Text(
-                              _ubicacionActual != null
-                                  ? 'GPS Listo'
-                                  : 'Ubicación',
-                            ),
-                          ),
-                        ),
+                        Expanded(child: OutlinedButton.icon(onPressed: () async { await _obtenerUbicacion(); setModalState(() {}); }, icon: Icon(_ubicacionActual != null ? Icons.check_circle : Icons.location_on, size: 20, color: _ubicacionActual != null ? Colors.green : null), label: Text(_ubicacionActual != null ? 'GPS Listo' : 'Ubicación'))),
                       ],
                     ),
                     const SizedBox(height: 24),
 
-                    // Vista previa de fotos
                     if (_fotosTomadas.isNotEmpty)
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -647,41 +510,10 @@ class _EmergencyBubbleState extends State<EmergencyBubble> {
                             scrollDirection: Axis.horizontal,
                             itemCount: _fotosTomadas.length,
                             itemBuilder: (context, index) {
-                              return Stack(
-                                children: [
-                                  Container(
-                                    margin: const EdgeInsets.only(right: 8),
-                                    width: 80,
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(8),
-                                      image: DecorationImage(
-                                        image: FileImage(_fotosTomadas[index]),
-                                        fit: BoxFit.cover,
-                                      ),
-                                    ),
-                                  ),
-                                  Positioned(
-                                    top: 0,
-                                    right: 8,
-                                    child: GestureDetector(
-                                      onTap: () {
-                                        setModalState(() {
-                                          _fotosTomadas.removeAt(index);
-                                        });
-                                      },
-                                      child: const CircleAvatar(
-                                        radius: 10,
-                                        backgroundColor: Colors.red,
-                                        child: Icon(
-                                          Icons.close,
-                                          size: 12,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              );
+                              return Stack(children: [
+                                Container(margin: const EdgeInsets.only(right: 8), width: 80, decoration: BoxDecoration(borderRadius: BorderRadius.circular(8), image: DecorationImage(image: FileImage(_fotosTomadas[index]), fit: BoxFit.cover))),
+                                Positioned(top: 0, right: 8, child: GestureDetector(onTap: () => setModalState(() => _fotosTomadas.removeAt(index)), child: const CircleAvatar(radius: 10, backgroundColor: Colors.red, child: Icon(Icons.close, size: 12, color: Colors.white)))),
+                              ]);
                             },
                           ),
                         ),
@@ -692,24 +524,9 @@ class _EmergencyBubbleState extends State<EmergencyBubble> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: _isLoading || _isUploadingFotos
-                            ? null
-                            : () => _enviarEmergencia(context),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFD32F2F),
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                        ),
-                        child: _isLoading || _isUploadingFotos
-                            ? const CircularProgressIndicator(
-                                color: Colors.white,
-                              )
-                            : const Text(
-                                'SOLICITAR AUXILIO INMEDIATO',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
+                        onPressed: _isLoading || _isUploadingFotos ? null : () => _enviarEmergencia(context),
+                        style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFD32F2F), padding: const EdgeInsets.symmetric(vertical: 16)),
+                        child: _isLoading || _isUploadingFotos ? const CircularProgressIndicator(color: Colors.white) : const Text('SOLICITAR AUXILIO INMEDIATO', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                       ),
                     ),
                     const SizedBox(height: 32),
@@ -726,54 +543,14 @@ class _EmergencyBubbleState extends State<EmergencyBubble> {
   @override
   Widget build(BuildContext context) {
     return Positioned(
-      left: _xOffset,
-      top: _yOffset,
+      left: _xOffset, top: _yOffset,
       child: GestureDetector(
-        // Lógica para arrastrar la burbuja
-        onPanUpdate: (details) {
-          setState(() {
-            // Actualizamos la posición sumando el desplazamiento del dedo
-            _xOffset += details.delta.dx;
-            _yOffset += details.delta.dy;
-
-            // Opcional: Podrías añadir límites aquí usando MediaQuery
-            // para que la burbuja no se salga de la pantalla.
-          });
-        },
-        // Lógica al tocar la burbuja
+        onPanUpdate: (details) => setState(() { _xOffset += details.delta.dx; _yOffset += details.delta.dy; }),
         onTap: () => _showEmergencySheet(context),
         child: Container(
-          width: 65,
-          height: 65,
-          decoration: BoxDecoration(
-            color: const Color(0xFFD32F2F), // Rojo alerta
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFFD32F2F).withOpacity(0.4),
-                blurRadius: 15,
-                spreadRadius: 5,
-                offset: const Offset(0, 5),
-              ),
-            ],
-            border: Border.all(color: Colors.white, width: 2),
-          ),
-          child: const Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.car_crash, color: Colors.white, size: 28),
-                Text(
-                  'SOS',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ),
+          width: 65, height: 65,
+          decoration: BoxDecoration(color: const Color(0xFFD32F2F), shape: BoxShape.circle, boxShadow: [BoxShadow(color: const Color(0xFFD32F2F).withOpacity(0.4), blurRadius: 15, spreadRadius: 5, offset: const Offset(0, 5))], border: Border.all(color: Colors.white, width: 2)),
+          child: const Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.car_crash, color: Colors.white, size: 28), Text('SOS', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold))])),
         ),
       ),
     );

@@ -100,6 +100,10 @@ def seed_final():
 
         # 2. TALLERES
         print("\n--- 2. PROCESANDO TALLERES ---")
+        esp_mecanica = db.query(Especialidad).filter(Especialidad.nombre == "Mecánica General").first()
+        esp_electrico = db.query(Especialidad).filter(Especialidad.nombre == "Electricidad").first()
+        esp_gomeria = db.query(Especialidad).filter(Especialidad.nombre == "Gomería").first()
+
         t_central = upsert_user(db, Taller, "taller_central@example.com",
             password_hash=h_pass, rol="ADMIN_TALLER",
             nombre_taller="Taller Mecánico Central", telefono="71234567", nit="987654321",
@@ -107,6 +111,9 @@ def seed_final():
             foto_perfil="https://res.cloudinary.com/dh8zaedgv/image/upload/v1777239418/1064c26b-8665-40dc-912e-0d722168e398.png",
             tipo_perfil="taller"
         )
+        if t_central and esp_mecanica and esp_electrico:
+            t_central.especialidades = [esp_mecanica, esp_electrico]
+
         t_norte = upsert_user(db, Taller, "taller_norte@example.com",
             password_hash=h_pass, rol="ADMIN_TALLER",
             nombre_taller="Taller Mecánico El Norte", telefono="70000001", nit="11111111",
@@ -114,6 +121,9 @@ def seed_final():
             foto_perfil="https://res.cloudinary.com/dh8zaedgv/image/upload/v1777234606/83a5d61f-4f3d-4fde-94e9-b3a0ff222c45.png",
             tipo_perfil="taller"
         )
+        if t_norte and esp_gomeria:
+            t_norte.especialidades = [esp_gomeria]
+
         t_sur = upsert_user(db, Taller, "taller_sur@example.com",
             password_hash=h_pass, rol="ADMIN_TALLER",
             nombre_taller="Taller Mecánico El Sur", telefono="70000002", nit="22222222",
@@ -121,6 +131,8 @@ def seed_final():
             foto_perfil="https://res.cloudinary.com/dh8zaedgv/image/upload/v1777234795/1dbc6eda-58cd-4d02-9316-3545ee82fb44.png",
             tipo_perfil="taller"
         )
+        if t_sur and esp_mecanica:
+            t_sur.especialidades = [esp_mecanica]
         db.flush()
 
         # 3. CLIENTES

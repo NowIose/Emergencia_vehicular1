@@ -228,9 +228,12 @@
       (click)="obtenerUbicacion()"
       class="text-xs flex items-center gap-1 font-bold text-primary hover:text-red-700 transition-colors">
       <span class="material-symbols-outlined text-sm">my_location</span>
-      OBTENER MI UBICACIÓN ACTUAL
+      RASTREAR MI UBICACIÓN ACTUAL
     </button>
   </div>
+  <p class="text-[10px] text-slate-500 mb-1 px-1">
+    * Puedes arrastrar el marcador o hacer clic en el mapa para ajustar la ubicación exacta.
+  </p>
   <div 
     id="mapa-registro" 
     [style.display]="registerForm.get('latitud')?.value ? 'block' : 'none'"
