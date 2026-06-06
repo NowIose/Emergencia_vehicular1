@@ -14,6 +14,7 @@ from app.modules.usuarios.models import Usuario, Cliente, Taller, PersonalTaller
 from app.modules.vehiculos.models import Vehiculo
 from app.modules.emergencias.models import Emergencia, DetalleEmergencia, Mensajeria
 from app.modules.bitacora.models import Bitacora
+from app.modules.usuarios.backups.models import BackupCloud
 
 
 # this is the Alembic Config object, which provides

@@ -1,12 +1,39 @@
 :host {
   display: block;
 }
-/* Estilos personalizados si Tailwind no llega a algo */
+
+/* Diseño de la barra de scroll horizontal en móviles (Delgada y elegante) */
+.scrollbar-menu::-webkit-scrollbar {
+  height: 3px; /* Grosor muy fino para que no estorbe */
+}
+
+.scrollbar-menu::-webkit-scrollbar-track {
+  background: transparent; /* Fondo transparente */
+}
+
+.scrollbar-menu::-webkit-scrollbar-thumb {
+  background: #cbd5e1; /* Color gris suave (slate-300) */
+  border-radius: 99px;
+}
+
+/* Soporte para Firefox */
+.scrollbar-menu {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+/* Animación de entrada para los componentes */
 .scale-in-center {
-  animation: scale-in-center 0.3s cubic-bezier(0.250, 0.460, 0.450, 0.940) both;
+  animation: scale-in-center 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
 }
 
 @keyframes scale-in-center {
-  0% { transform: scale(0); opacity: 1; }
-  100% { transform: scale(1); opacity: 1; }
+  0% {
+    transform: scale(0.98);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
