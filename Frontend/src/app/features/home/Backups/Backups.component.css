@@ -1,0 +1,41 @@
+/* Backups.component.css */
+
+/* Diseño exclusivo para dispositivos móviles (pantallas menores a 768px) */
+@media (max-width: 768px) {
+  /* Ocultamos la cabecera normal de la tabla */
+  .responsive-table thead {
+    display: none;
+  }
+
+  /* Convertimos cada fila en un bloque tipo "tarjeta" */
+  .responsive-table tbody tr {
+    display: block;
+    border-bottom: 4px solid #e2e8f0; /* Un borde más grueso para separar tarjetas */
+  }
+
+  /* Convertimos las celdas en contenedores Flex para separar título y valor */
+  .responsive-table tbody td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    text-align: right;
+    border-bottom: 1px solid #f1f5f9;
+  }
+
+  /* Magia de CSS: Usamos el atributo data-label del HTML como título a la izquierda */
+  .responsive-table tbody td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: #64748b; /* Equivalente a text-slate-500 */
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    text-align: left;
+    margin-right: 1rem;
+  }
+
+  /* Quitamos el borde inferior a la última celda de cada tarjeta */
+  .responsive-table tbody td:last-child {
+    border-bottom: none;
+  }
+}

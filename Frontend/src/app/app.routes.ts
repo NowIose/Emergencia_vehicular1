@@ -10,25 +10,27 @@ import { FacturacionComponent } from './features/home/facturacion/facturacion.co
 import { FacturacionAdminComponent } from './features/home/facturacion-admin/facturacion-admin.component';
 import { BitacoraComponent } from './features/taller/bitacora/bitacora.component';
 import { ReportesComponent } from './features/reportes/reportes.component';
-import { ReportesAdminComponent } from './features/reportes-admin/reportes-admin.component';
+import { ReportesAdminComponent }  from './features/reportes-admin/reportes-admin.component';;
+import { BackupsComponent } from './features/home/Backups/Backups.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'landing', pathMatch: 'full' },
   { path: 'landing', component: LandingComponent },
   { path: 'login', component: LoginComponent },
   { path: 'register', component: RegisterComponent },
-  { 
-    path: 'home', 
+  {
+    path: 'home',
     component: HomeComponent,
     children: [
       { path: '', component: DashboardComponent },
       { path: 'emergencia', component: EmergenciasTallerComponent },
       { path: 'chat', component: ChatComponent },
       { path: 'bitacora', component: BitacoraComponent },
-      { path: 'reportes', component:ReportesComponent},
-      { path: 'reportes-admin', component:ReportesAdminComponent},
+      { path: 'reportes', component: ReportesComponent },
+      { path: 'reportes-admin', component: ReportesAdminComponent },
+      { path: 'backups', component: BackupsComponent },
       { path: 'facturacion', component: FacturacionComponent },
       { path: 'facturacion-global', component: FacturacionAdminComponent },
-    ]
+    ],
   },
 ];

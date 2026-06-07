@@ -17,7 +17,20 @@ from app.modules.bitacora.routes import router as bitacora_router
 from app.modules.emergencias.reportes import router as reportes_router
 from app.modules.reportes.routes import router as reportes_admin_router
 from app.modules.pagos.routes import router as pagos_router
+from app.core.database import SessionLocal 
+from app.modules.usuarios.backups.services import generar_backup_en_nube
+from app.modules.usuarios.backups.routes import router as backups_router
 
+def tarea_backup_diario():
+    print("Iniciando backup automático hacia R2 de las 7:00 AM...")
+    db = SessionLocal()
+    try:
+        generar_backup_en_nube(db)
+        print("Backup automático completado con éxito.")
+    except Exception as e:
+        print(f"Error al generar backup automático: {e}")
+    finally:
+        db.close() # Siempre cerrar la sesión
 app = FastAPI(title="Emergencia Vehicular API")
 # Configurar quién tiene permiso de hablar con el servidor
 origins = [
@@ -40,3 +53,5 @@ app.include_router(bitacora_router)
 app.include_router(reportes_router)
 app.include_router(reportes_admin_router)
 app.include_router(pagos_router)
+
+app.include_router(backups_router)
