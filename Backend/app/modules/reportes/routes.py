@@ -22,3 +22,16 @@ def reporte_usuarios_detallado(
 ):
     # Pasamos AMBOS parámetros al servicio
     return services.obtener_reporte_usuarios(db, rol_filtro=rol, orden=orden)
+
+from fastapi import File, UploadFile
+# ... tus otras importaciones
+
+@router.post("/filtro-voz")
+async def filtro_por_voz(
+    file: UploadFile = File(...),
+    current_user: Usuario = Depends(get_current_user)
+):
+    # Le pasamos el archivo de audio al servicio que crearemos
+    filtros = await services.procesar_audio_filtros(file)
+    print(filtros)
+    return filtros

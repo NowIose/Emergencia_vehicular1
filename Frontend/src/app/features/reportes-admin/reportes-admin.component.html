@@ -1,8 +1,12 @@
 <div class="p-6 bg-slate-50 min-h-screen">
   <div class="flex justify-between items-center mb-6">
     <h2 class="text-2xl font-black text-slate-800 tracking-tight">Reporte Maestro de Usuarios</h2>
-    
-    <div class="flex gap-3"> <button (click)="descargarExcel()" class="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl transition-all shadow-sm text-sm font-bold">
+
+    <div class="flex gap-3">
+      <button
+        (click)="descargarExcel()"
+        class="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl transition-all shadow-sm text-sm font-bold"
+      >
         <span class="material-symbols-outlined text-sm">description</span> Exportar Excel
       </button>
 
@@ -11,12 +15,35 @@
       </button>
     </div>
   </div>
+  <button
+    (click)="toggleGrabacion()"
+    [ngClass]="{
+      'bg-red-500 animate-pulse hover:bg-red-600': isRecording,
+      'bg-blue-600 hover:bg-blue-700': !isRecording,
+    }"
+    class="flex items-center justify-center w-10 h-10 rounded-full text-white transition-all shadow-md relative"
+    title="Filtrar por voz con IA"
+  >
+    <span class="material-symbols-outlined text-xl">
+      {{ isRecording ? 'stop' : 'mic' }}
+    </span>
+
+    <span *ngIf="isProcessingVoice" class="absolute -top-1 -right-1 flex h-3 w-3">
+      <span
+        class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"
+      ></span>
+      <span class="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
+    </span>
+  </button>
 
   <div class="bg-white p-4 rounded-2xl shadow-sm mb-6 flex gap-4 items-end border border-slate-100">
-    
     <div class="flex-grow">
       <label class="text-xs font-bold text-slate-400 uppercase mb-2 block">Filtrar por Rol</label>
-      <select class="form-select w-full rounded-xl border-slate-200" [(ngModel)]="filtroRol" (change)="cargarDatos()">
+      <select
+        class="form-select w-full rounded-xl border-slate-200"
+        [(ngModel)]="filtroRol"
+        (change)="cargarDatos()"
+      >
         <option value="">Todos los Usuarios</option>
         <option value="ADMIN_TALLER">Talleres</option>
         <option value="CLIENTE">Clientes</option>
@@ -24,17 +51,25 @@
     </div>
 
     <div class="flex-grow" *ngIf="filtroRol === 'ADMIN_TALLER'">
-      <label class="text-xs font-bold text-slate-400 uppercase mb-2 block">Ordenar por Calificación</label>
-      <select class="form-select w-full rounded-xl border-slate-200" [(ngModel)]="filtroOrden" (change)="cargarDatos()">
+      <label class="text-xs font-bold text-slate-400 uppercase mb-2 block"
+        >Ordenar por Calificación</label
+      >
+      <select
+        class="form-select w-full rounded-xl border-slate-200"
+        [(ngModel)]="filtroOrden"
+        (change)="cargarDatos()"
+      >
         <option value="">Sin orden específico</option>
         <option value="mejor_calificados">Mejores calificados (⭐)</option>
         <option value="peor_calificados">Peores calificados</option>
       </select>
     </div>
-    
   </div>
 
-  <div class="bg-white rounded-2xl shadow-sm overflow-hidden border border-slate-100" id="tablaAdmin">
+  <div
+    class="bg-white rounded-2xl shadow-sm overflow-hidden border border-slate-100"
+    id="tablaAdmin"
+  >
     <table class="w-full text-left border-collapse">
       <thead class="bg-slate-50 text-slate-400 uppercase text-[10px] font-black">
         <tr>
@@ -47,16 +82,27 @@
       </thead>
       <tbody class="text-slate-600 font-medium">
         <tr *ngIf="usuarios.length === 0">
-          <td colspan="5" class="p-8 text-center text-slate-400 italic">No se encontraron registros...</td>
+          <td colspan="5" class="p-8 text-center text-slate-400 italic">
+            No se encontraron registros...
+          </td>
         </tr>
 
-        <tr *ngFor="let u of usuarios" class="border-t border-slate-50 hover:bg-slate-50/50 transition-colors">
+        <tr
+          *ngFor="let u of usuarios"
+          class="border-t border-slate-50 hover:bg-slate-50/50 transition-colors"
+        >
           <td class="p-4 text-xs">#{{ u.id }}</td>
           <td class="p-4 font-bold text-slate-800">{{ u.nombre }}</td>
           <td class="p-4 text-sm">{{ u.email }}</td>
           <td class="p-4">
-            <span [ngClass]="u.rol.toLowerCase() === 'cliente' ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600'" 
-                  class="px-3 py-1 rounded-full text-[10px] font-black uppercase">
+            <span
+              [ngClass]="
+                u.rol.toLowerCase() === 'cliente'
+                  ? 'bg-blue-100 text-blue-600'
+                  : 'bg-purple-100 text-purple-600'
+              "
+              class="px-3 py-1 rounded-full text-[10px] font-black uppercase"
+            >
               {{ u.rol }}
             </span>
           </td>
