@@ -7,7 +7,7 @@ import { AuthService } from '../../../core/services/auth/auth.service';
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, RouterLink, ReactiveFormsModule], // Importamos ReactiveFormsModule
+  imports: [CommonModule, RouterLink, ReactiveFormsModule],
   templateUrl: './login.component.html',
   styleUrl: './login.component.css'
 })
@@ -16,7 +16,6 @@ export class LoginComponent {
   private authService = inject(AuthService);
   private router = inject(Router);
 
-  // Definimos el formulario con validaciones básicas
   loginForm = this.fb.group({
     email: ['', [Validators.required, Validators.email]],
     password: ['', [Validators.required, Validators.minLength(6)]],
@@ -24,22 +23,36 @@ export class LoginComponent {
 
   onSubmit() {
     if (this.loginForm.valid) {
-      // Usamos 'any' o una interfaz para no pelear con tipos estrictos aquí
       const credentials = this.loginForm.value as any; 
       
       this.authService.login(credentials).subscribe({
-        next: (response) => {
-          // response ahora trae { access_token, token_type, user }
-          console.log('Datos del usuario logueado:', response.user);
-          this.router.navigate(['/home']);
+        next: (res) => {
+          console.log('Login exitoso:', res);
+          
+          // Guardamos token y datos del usuario
+          localStorage.setItem('access_token', res.access_token);
+          localStorage.setItem('user_data', JSON.stringify(res.user));
+
+          // Verificamos si es un taller que aún no ha pagado
+          if (res.requiere_pago) {
+            alert('Cuenta registrada. Redirigiendo a facturación para activar tu suscripción...');
+            this.router.navigate(['/home/facturacion']);
+            return;
+          }
+
+          // Redirigimos según rol
+          if (res.user.rol === 'admin_sistema') {
+            this.router.navigate(['/home/reportes-admin']);
+          } else {
+            this.router.navigate(['/home']);
+          }
         },
         error: (err) => {
           console.error('Error en login', err);
-          // Mostramos el mensaje exacto que viene del backend
-          const msg = err.error?.detail || 'Credenciales incorrectas';
+          const msg = err.error?.detail || 'Email o contraseña incorrectos';
           alert(msg);
         }
       });
     }
-}
+  }
 }

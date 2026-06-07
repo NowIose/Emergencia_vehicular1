@@ -6,9 +6,11 @@ import { LandingComponent } from './features/home-page/landing.component';
 import { ChatComponent } from './features/chat/chat.component';
 import { EmergenciasTallerComponent } from './features/emergencia/emergencia.component';
 import { DashboardComponent } from './features/home/dashboard/dashboard.component';
+import { FacturacionComponent } from './features/home/facturacion/facturacion.component';
+import { FacturacionAdminComponent } from './features/home/facturacion-admin/facturacion-admin.component';
 import { BitacoraComponent } from './features/taller/bitacora/bitacora.component';
 import { ReportesComponent } from './features/reportes/reportes.component';
-import { ReportesAdminComponent }from './features/reportes-admin/reportes-admin.component'
+import { ReportesAdminComponent } from './features/reportes-admin/reportes-admin.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'landing', pathMatch: 'full' },
@@ -25,6 +27,8 @@ export const routes: Routes = [
       { path: 'bitacora', component: BitacoraComponent },
       { path: 'reportes', component:ReportesComponent},
       { path: 'reportes-admin', component:ReportesAdminComponent},
+      { path: 'facturacion', component: FacturacionComponent },
+      { path: 'facturacion-global', component: FacturacionAdminComponent },
     ]
   },
 ];

@@ -16,6 +16,7 @@ from app.modules.bitacora.routes import router as bitacora_router
 # from app.modules.emergencias.routes import router as emergencias_router
 from app.modules.emergencias.reportes import router as reportes_router
 from app.modules.reportes.routes import router as reportes_admin_router
+from app.modules.pagos.routes import router as pagos_router
 
 app = FastAPI(title="Emergencia Vehicular API")
 # Configurar quién tiene permiso de hablar con el servidor
@@ -38,3 +39,4 @@ app.include_router(emergencias_router)
 app.include_router(bitacora_router)
 app.include_router(reportes_router)
 app.include_router(reportes_admin_router)
+app.include_router(pagos_router)

@@ -30,6 +30,7 @@ class TallerCreate(BaseModel):
     foto_perfil: Optional[str] 
     # RECIBIR LOS IDS DESDE EL FRONTEND (Ej: [1, 3])
     especialidades_ids: Optional[list[int]] = []
+    plan_codigo: str = "mensual"
     class Config:
         from_attributes = True
 
@@ -68,6 +69,8 @@ class UsuarioLoginInfo(BaseModel):
     id: int
     email: EmailStr
     rol: str
+    nombre: Optional[str] = None
+    tipo_perfil: Optional[str] = None
 
 #Backend responde con TokenResponse(el token Jwt)
 
@@ -75,6 +78,7 @@ class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: UsuarioLoginInfo
+    requiere_pago: bool = False
 
 
 
@@ -133,6 +137,13 @@ class TallerResponse(BaseModel):
     
     # ENVIAR LAS ESPECIALIDADES AL FRONTEND
     especialidades: list[EspecialidadResponse] = []
+    suscripcion_estado: Optional[str] = None
+    suscripcion_plan: Optional[str] = None
+    suscripcion_periodo_fin: Optional[str] = None
+    ultima_factura_url: Optional[str] = None
+    servicios_atendidos: int = 0
+    clientes_atendidos: int = 0
+    personal_registrado: int = 0
 
     class Config:
         from_attributes = True

@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from passlib.context import CryptContext
 
 from app.core.database import get_db
@@ -26,6 +27,10 @@ from .services import authenticate_user, create_personal_taller, get_personal_by
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from typing import List
 from pydantic import BaseModel
+from app.modules.pagos.services import crear_checkout_session
+from app.modules.pagos.models import SuscripcionTaller
+from app.modules.emergencias.models import Emergencia, EstadoEmergencia
+from app.modules.vehiculos.models import Vehiculo
 
 
 #es un descriptor que le dice a FastAPI donde pedir el token en este caso el endpoint /login
@@ -45,7 +50,14 @@ def register_taller(obj_in: TallerCreate, fastapi_request: Request, db: Session 
         # Registrar en bitácora
         registrar_evento(db, fastapi_request, "Registro de Taller", f"Nuevo taller registrado: {obj_in.nombre_taller} ({obj_in.email})")
         
-        return {"message": "Taller registrado exitosamente", "id": nuevo_taller.id}
+        checkout_session = crear_checkout_session(db, nuevo_taller, obj_in.plan_codigo)
+        
+        return {
+            "message": "Taller registrado exitosamente. Completa el pago para activar tu cuenta.",
+            "id": nuevo_taller.id,
+            "checkout_url": checkout_session.url,
+            "session_id": checkout_session.id,
+        }
     except Exception as e:
         print(f"ERROR EN REGISTRO: {e}")
         #raise HTTPException(status_code=500, detail="Error interno al registrar el taller")
@@ -133,6 +145,29 @@ def login(
     # Registrar inicio de sesión exitoso
     registrar_evento(db, fastapi_request, "Inicio de sesión", f"Usuario {user.email} ha iniciado sesión", usuario=user)
 
+    # NUEVO: Bloqueo por suscripción para talleres
+    if user.rol in [UserRole.ADMIN_TALLER, UserRole.PERSONAL_TALLER]:
+        taller_id = user.id
+        if user.rol == UserRole.PERSONAL_TALLER:
+            personal = db.query(PersonalTaller).filter(PersonalTaller.id == user.id).first()
+            taller_id = personal.taller_id if personal else None
+        
+        if taller_id:
+            taller = db.query(Taller).filter(Taller.id == taller_id).first()
+            if taller and not taller.suscripcion_activa:
+                return {
+                    "access_token": create_access_token(data={"sub": str(user.id), "rol": user.rol.value}), 
+                    "token_type": "bearer",
+                    "requiere_pago": True,
+                    "user": {
+                        "id": user.id,
+                        "email": user.email,
+                        "rol": user.rol.value,
+                        "nombre": nombre_usuario,
+                        "tipo_perfil": user.tipo_perfil
+                    }
+                }
+
     return {              # "access_token": access_token, "token_type": "bearer"
         "access_token": access_token, 
         "token_type": "bearer",
@@ -180,7 +215,31 @@ def get_all_talleres(db: Session = Depends(get_db)):
     Devuelve la lista de todos los talleres registrados.
     """
     talleres = db.query(Taller).all()
-    return talleres
+    respuesta = []
+
+    for taller in talleres:
+        servicios_atendidos = db.query(func.count(Emergencia.nro)).filter(
+            Emergencia.id_taller == taller.id,
+            Emergencia.estado.in_([EstadoEmergencia.atendiendo, EstadoEmergencia.terminado]),
+        ).scalar() or 0
+        clientes_atendidos = db.query(func.count(func.distinct(Vehiculo.cliente_id))).join(
+            Emergencia, Emergencia.id_vehiculo == Vehiculo.id
+        ).filter(Emergencia.id_taller == taller.id).scalar() or 0
+        suscripcion = db.query(SuscripcionTaller).filter(SuscripcionTaller.taller_id == taller.id).first()
+
+        data = TallerResponse.model_validate(taller).model_dump()
+        data.update({
+            "suscripcion_estado": suscripcion.estado if suscripcion else "sin_suscripcion",
+            "suscripcion_plan": suscripcion.plan_codigo if suscripcion else None,
+            "suscripcion_periodo_fin": suscripcion.periodo_fin.isoformat() if suscripcion and suscripcion.periodo_fin else None,
+            "ultima_factura_url": suscripcion.ultima_factura_url if suscripcion else None,
+            "servicios_atendidos": servicios_atendidos,
+            "clientes_atendidos": clientes_atendidos,
+            "personal_registrado": len(taller.personal or []),
+        })
+        respuesta.append(data)
+
+    return respuesta
 '''┌─ IMPORTS (todo arriba)
 ├─ router = APIRouter(...)
 ├─ oauth2_scheme = OAuth2PasswordBearer(...)

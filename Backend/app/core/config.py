@@ -1,6 +1,7 @@
 from pydantic_settings import BaseSettings,SettingsConfigDict
 import cloudinary
 import os
+from typing import Optional
 
 class Settings(BaseSettings):
     SECRET_KEY: str
@@ -12,6 +13,13 @@ class Settings(BaseSettings):
     CLOUDINARY_CLOUD_NAME: str
     CLOUDINARY_API_KEY: str
     CLOUDINARY_API_SECRET: str
+
+    # Stripe (modo test para el proyecto academico)
+    STRIPE_SECRET_KEY: Optional[str] = None
+    STRIPE_WEBHOOK_SECRET: Optional[str] = None
+    STRIPE_MONTHLY_PRICE_ID: Optional[str] = None
+    STRIPE_YEARLY_PRICE_ID: Optional[str] = None
+    FRONTEND_URL: str = "http://localhost:4200"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")   
 

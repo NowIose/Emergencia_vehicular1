@@ -272,6 +272,41 @@
 </div>
 
 
+        <!-- SELECCIÓN DE PLAN -->
+        <div class="space-y-3">
+          <label class="text-xs font-bold text-slate-500 ml-1 uppercase">Selecciona tu Plan de Acceso</label>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <label class="relative flex flex-col p-4 bg-slate-50 rounded-2xl border-2 cursor-pointer transition-all"
+                   [class.border-primary]="registerForm.get('plan_codigo')?.value === 'mensual'"
+                   [class.bg-white]="registerForm.get('plan_codigo')?.value === 'mensual'">
+              <input type="radio" formControlName="plan_codigo" value="mensual" class="hidden">
+              <div class="flex justify-between items-start mb-1">
+                <span class="text-sm font-black text-slate-800">Plan Mensual</span>
+                <span class="text-primary font-black">$15<small class="text-[10px] text-slate-400">/mes</small></span>
+              </div>
+              <p class="text-[10px] text-slate-500 font-medium">Ideal para empezar. Sin compromisos.</p>
+              <div *ngIf="registerForm.get('plan_codigo')?.value === 'mensual'" class="absolute top-2 right-2">
+                <span class="material-symbols-outlined text-primary text-sm">check_circle</span>
+              </div>
+            </label>
+
+            <label class="relative flex flex-col p-4 bg-slate-50 rounded-2xl border-2 cursor-pointer transition-all"
+                   [class.border-primary]="registerForm.get('plan_codigo')?.value === 'anual'"
+                   [class.bg-white]="registerForm.get('plan_codigo')?.value === 'anual'">
+              <input type="radio" formControlName="plan_codigo" value="anual" class="hidden">
+              <div class="flex justify-between items-start mb-1">
+                <span class="text-sm font-black text-slate-800">Plan Anual</span>
+                <span class="text-primary font-black">$110<small class="text-[10px] text-slate-400">/año</small></span>
+              </div>
+              <p class="text-[10px] text-slate-500 font-medium">Ahorra más de 20% anual.</p>
+              <div class="absolute -top-2 -right-1 bg-green-500 text-white text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter">Oferta</div>
+              <div *ngIf="registerForm.get('plan_codigo')?.value === 'anual'" class="absolute top-2 right-2">
+                <span class="material-symbols-outlined text-primary text-sm">check_circle</span>
+              </div>
+            </label>
+          </div>
+        </div>
+
         <div class="space-y-1">
           <label class="text-xs font-bold text-slate-500 ml-1 uppercase"
             >Establecer Contraseña</label

@@ -1,6 +1,7 @@
 import { Component, inject ,ChangeDetectorRef ,OnDestroy, HostListener } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AuthService } from '../../../core/services/auth/auth.service';
+import { PagosService } from '../../../core/services/pagos.service';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { MediaService } from '../../../core/services/media.service';
@@ -17,6 +18,7 @@ declare var mapboxgl: any;
 export class RegisterComponent implements OnDestroy {
   private fb = inject(FormBuilder);
   private authService = inject(AuthService);
+  private pagosService = inject(PagosService);
   private router = inject(Router);
   private cdr = inject(ChangeDetectorRef);
   private map: any;
@@ -32,7 +34,8 @@ export class RegisterComponent implements OnDestroy {
     direccion: ['', Validators.required],
     latitud: [0, [Validators.required, Validators.min(-90), Validators.max(90)]], 
     longitud: [0, [Validators.required, Validators.min(-180), Validators.max(180)]],
-    foto_perfil: [''] 
+    foto_perfil: [''],
+    plan_codigo: ['mensual', Validators.required] // Nuevo campo
   });
   registroCompletado: boolean = false; 
 
@@ -43,7 +46,8 @@ export class RegisterComponent implements OnDestroy {
         ...formValues,
         foto_perfil: formValues.foto_perfil || 'default.png',
         latitud: formValues.latitud || 0,
-        longitud: formValues.longitud || 0
+        longitud: formValues.longitud || 0,
+        plan_codigo: formValues.plan_codigo || 'mensual'
       };
 
       console.log('Enviando datos al servidor...', datosRegistro);
@@ -51,8 +55,27 @@ export class RegisterComponent implements OnDestroy {
       this.authService.registrarTaller(datosRegistro).subscribe({
         next: (res) => {
           this.registroCompletado = true;
-          alert('¡Registro exitoso! Ahora ingresa con tus credenciales.');
-          this.router.navigate(['/login']);
+          alert('¡Registro exitoso! Iniciando configuración de pago...');
+          
+          // AUTOLOGIN PARA PODER INICIAR EL PAGO
+          this.authService.login({
+            email: datosRegistro.email!,
+            password: datosRegistro.password!
+          }).subscribe({
+            next: () => {
+              // INICIAR PAGO SEGÚN EL PLAN ELEGIDO
+              this.pagosService.crearCheckoutSession(datosRegistro.plan_codigo!).subscribe({
+                next: (res) => {
+                  window.location.href = res.checkout_url;
+                },
+                error: (err) => {
+                  console.error('Error al iniciar pago', err);
+                  this.router.navigate(['/login']);
+                }
+              });
+            },
+            error: () => this.router.navigate(['/login'])
+          });
         },
         error: (err) => {
           const mensajeError = err.error?.detail || 'No se pudo completar el registro';

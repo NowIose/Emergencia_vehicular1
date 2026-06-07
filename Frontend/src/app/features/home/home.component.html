@@ -52,12 +52,30 @@
       </a>
 
       <a
+        *ngIf="userRole !== 'admin_sistema'"
+        routerLink="/home/facturacion"
+        routerLinkActive="opacity-100 bg-white/10"
+        class="flex items-center gap-3 p-3 hover:bg-white/10 rounded-2xl cursor-pointer opacity-70 transition-all text-green-400"
+      >
+        <span class="material-symbols-outlined">payments</span> Facturación
+      </a>
+
+      <a
         *ngIf="isAdminSistema"
         routerLink="/home/reportes-admin"
         routerLinkActive="opacity-100 bg-white/10"
         class="flex items-center gap-3 p-3 hover:bg-white/10 rounded-2xl cursor-pointer opacity-70 transition-all text-amber-400"
       >
         <span class="material-symbols-outlined">admin_panel_settings</span> Reportes Admin
+      </a>
+
+      <a
+        *ngIf="isAdminSistema"
+        routerLink="/home/facturacion-global"
+        routerLinkActive="opacity-100 bg-white/10"
+        class="flex items-center gap-3 p-3 hover:bg-white/10 rounded-2xl cursor-pointer opacity-70 transition-all text-green-400"
+      >
+        <span class="material-symbols-outlined">monetization_on</span> Facturación Global
       </a>
     </nav>
 
@@ -133,6 +151,16 @@
     >
       <span class="material-symbols-outlined">analytics</span>
       <span class="text-[9px] font-bold uppercase tracking-tighter mt-1">Reportes</span>
+    </a>
+
+    <a
+      *ngIf="!isAdminSistema"
+      routerLink="/home/facturacion"
+      routerLinkActive="text-primary"
+      class="flex flex-col items-center text-slate-400 w-full"
+    >
+      <span class="material-symbols-outlined">payments</span>
+      <span class="text-[9px] font-bold uppercase tracking-tighter mt-1">Facturas</span>
     </a>
 
     <a

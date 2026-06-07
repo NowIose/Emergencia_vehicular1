@@ -105,7 +105,9 @@ async def buscar_talleres_cercanos(req: schemas.BuscarTalleresRequest, db: Sessi
                         distancia_km=round(dist, 2),
                         direccion=t.direccion,
                         foto_perfil=t.foto_perfil,
-                        especialidades=[e.nombre for e in t.especialidades]
+                        especialidades=[e.nombre for e in t.especialidades],
+                        latitud=t.latitud,
+                        longitud=t.longitud
                     ))
 
     sugeridos.sort(key=lambda x: x.distancia_km)

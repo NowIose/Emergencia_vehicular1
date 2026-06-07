@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { HttpClient, HttpHeaders, HttpErrorResponse } from '@angular/common/http';
 import { PersonalService } from '../../../core/services/personal/personal.service';
+import { PagosService } from '../../../core/services/pagos.service';
 import { MediaService } from '../../../core/services/media.service';
 import {
   EmergenciaWsService,
@@ -26,6 +27,7 @@ export class DashboardComponent implements OnInit {
   private mediaService = inject(MediaService);
   private emergenciaWs = inject(EmergenciaWsService);
   private http = inject(HttpClient);
+  private pagosService = inject(PagosService);
 
   userRole = signal<string>('');
   listaPersonal = signal<PersonalTaller[]>([]);
@@ -79,11 +81,19 @@ export class DashboardComponent implements OnInit {
     if (this.userRole() === 'admin_sistema') {
       this.cargarTalleres();
     } else {
-      this.cargarPersonal();
-      this.cargarEspecialidades();
-      this.cargarEmergenciasPendientes();
-      this.cargarStats();
-      this.cargarReviews();
+      // Verificar suscripción antes de cargar lo operativo
+      this.pagosService.obtenerMiSuscripcion().subscribe(sub => {
+        if (sub && (sub.estado === 'active' || sub.estado === 'trialing')) {
+          this.cargarPersonal();
+          this.cargarEspecialidades();
+          this.cargarEmergenciasPendientes();
+          this.cargarStats();
+          this.cargarReviews();
+        } else {
+          console.warn('⚠️ Acceso restringido: Suscripción inactiva');
+          // El login ya maneja la redirección, pero esto es doble seguridad
+        }
+      });
 
       this.emergenciaWs.emergencias$.subscribe((msg) => {
         if (msg.type === 'NEW_EMERGENCY') {

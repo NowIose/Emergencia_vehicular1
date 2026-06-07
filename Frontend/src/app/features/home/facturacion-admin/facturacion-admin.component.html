@@ -1,0 +1,143 @@
+<div class="p-4 md:p-8 max-w-7xl mx-auto font-manrope">
+  <div class="mb-8">
+    <h2 class="text-3xl font-black text-slate-800 tracking-tight flex items-center gap-3">
+      <span class="material-symbols-outlined text-amber-500 text-4xl">admin_panel_settings</span>
+      Control Financiero Global
+    </h2>
+    <p class="text-slate-500 font-medium mt-1">Supervisión de suscripciones, pagos y métricas de talleres</p>
+  </div>
+
+  <!-- TARJETAS DE RESUMEN -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+    <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100">
+      <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Planes Activos</p>
+      <div class="flex justify-between items-end">
+        <h4 class="text-4xl font-black text-green-600">{{ resumen().activos }}</h4>
+        <span class="material-symbols-outlined text-green-200 text-3xl">check_circle</span>
+      </div>
+    </div>
+    <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100">
+      <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Pendientes/Vencidos</p>
+      <div class="flex justify-between items-end">
+        <h4 class="text-4xl font-black text-amber-500">{{ resumen().pendientes }}</h4>
+        <span class="material-symbols-outlined text-amber-200 text-3xl">error</span>
+      </div>
+    </div>
+    <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100">
+      <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Por Vencer (7 días)</p>
+      <div class="flex justify-between items-end">
+        <h4 class="text-4xl font-black text-blue-500">{{ resumen().porVencer }}</h4>
+        <span class="material-symbols-outlined text-blue-200 text-3xl">schedule</span>
+      </div>
+    </div>
+    <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100">
+      <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Total Recaudado</p>
+      <div class="flex justify-between items-end">
+        <h4 class="text-3xl font-black text-slate-800">${{ resumen().totalFacturado | number:'1.2-2' }}</h4>
+        <span class="material-symbols-outlined text-slate-200 text-3xl">monetization_on</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- TABLA DETALLADA -->
+  <div class="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
+    <div class="p-8 border-b border-slate-50 flex justify-between items-center">
+      <h3 class="text-xl font-black text-slate-800">Desglose por Taller</h3>
+      <button (click)="cargarStats()" class="p-2 hover:bg-slate-50 rounded-full transition-colors">
+        <span class="material-symbols-outlined text-slate-400" [class.animate-spin]="cargando()">refresh</span>
+      </button>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="bg-slate-50/50">
+            <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Taller / Contacto</th>
+            <th class="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Estado Suscripción</th>
+            <th class="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Periodo</th>
+            <th class="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Métricas</th>
+            <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Acciones</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-50">
+          <tr *ngFor="let t of talleresStats()" class="hover:bg-slate-50/50 transition-colors group">
+            <td class="px-8 py-6">
+              <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 font-black overflow-hidden border-2 border-white shadow-sm">
+                  <img *ngIf="t.foto_perfil" [src]="t.foto_perfil" class="w-full h-full object-cover">
+                  <span *ngIf="!t.foto_perfil">{{ t.nombre_taller.charAt(0) }}</span>
+                </div>
+                <div>
+                  <p class="font-black text-slate-800">{{ t.nombre_taller }}</p>
+                  <div class="flex items-center gap-1 mt-0.5">
+                    <span class="material-symbols-outlined text-[10px] text-primary">person</span>
+                    <p class="text-[10px] text-slate-400 font-black uppercase tracking-tighter">Admin: {{ t.admin_email }}</p>
+                  </div>
+                </div>
+              </div>
+            </td>
+            <td class="px-6 py-6">
+              <span 
+                [ngClass]="{
+                  'bg-green-100 text-green-700': t.estado_pago === 'active' || t.estado_pago === 'trialing',
+                  'bg-amber-100 text-amber-700': t.estado_pago === 'pending' || t.estado_pago === 'past_due',
+                  'bg-red-100 text-red-700': t.estado_pago === 'canceled' || t.estado_pago === 'unpaid',
+                  'bg-slate-100 text-slate-500': t.estado_pago === 'sin_registro'
+                }"
+                class="px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-wider"
+              >
+                {{ t.estado_pago | uppercase }}
+              </span>
+              <p class="text-[9px] font-bold text-slate-400 mt-2 uppercase tracking-tighter">Plan: {{ t.plan || 'Ninguno' }}</p>
+            </td>
+            <td class="px-6 py-6 font-medium">
+              <div *ngIf="t.periodo_inicio" class="space-y-1">
+                <p class="text-[10px] text-slate-400 italic">Desde: {{ t.periodo_inicio | date:'shortDate' }}</p>
+                <p class="text-[10px] text-slate-800 font-bold">Hasta: {{ t.periodo_fin | date:'shortDate' }}</p>
+              </div>
+              <p *ngIf="!t.periodo_inicio" class="text-xs text-slate-300 italic">Sin datos</p>
+            </td>
+            <td class="px-6 py-6">
+              <div class="flex items-center justify-center gap-6">
+                <div class="text-center">
+                  <p class="text-xs font-black text-slate-800">{{ t.servicios_atendidos }}</p>
+                  <p class="text-[8px] font-black text-slate-400 uppercase tracking-tighter">Servicios</p>
+                </div>
+                <div class="text-center border-x border-slate-100 px-4">
+                  <p class="text-xs font-black text-slate-800">{{ t.personal_registrado }}</p>
+                  <p class="text-[8px] font-black text-slate-400 uppercase tracking-tighter">Personal</p>
+                </div>
+                <div class="text-center">
+                  <div class="flex items-center justify-center gap-0.5 text-amber-500">
+                    <span class="text-xs font-black">{{ t.calificacion_promedio || '0.0' }}</span>
+                    <span class="material-symbols-outlined text-[10px]">star</span>
+                  </div>
+                  <p class="text-[8px] font-black text-slate-400 uppercase tracking-tighter">Rating</p>
+                </div>
+              </div>
+              <div class="mt-3 flex flex-wrap gap-1 justify-center">
+                 <span *ngFor="let esp of t.especialidades" class="text-[7px] font-bold bg-slate-50 text-slate-400 px-2 py-0.5 rounded-full border border-slate-100 uppercase">{{ esp }}</span>
+              </div>
+            </td>
+            <td class="px-8 py-6 text-right">
+              <button 
+                *ngIf="t.ultima_factura"
+                (click)="abrirFactura(t.ultima_factura)"
+                class="bg-slate-50 text-slate-600 p-3 rounded-2xl hover:bg-primary hover:text-white transition-all shadow-sm"
+                title="Ver última factura"
+              >
+                <span class="material-symbols-outlined text-lg">receipt_long</span>
+              </button>
+              <span *ngIf="!t.ultima_factura" class="text-[9px] text-slate-300 font-bold italic uppercase">Sin facturas</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      
+      <div *ngIf="talleresStats().length === 0 && !cargando()" class="p-20 text-center">
+        <span class="material-symbols-outlined text-slate-200 text-6xl mb-4">folder_off</span>
+        <p class="text-slate-400 font-black italic uppercase tracking-widest">No se encontraron talleres registrados</p>
+      </div>
+    </div>
+  </div>
+</div>

@@ -73,6 +73,10 @@ class Taller(Usuario):
     # Para geolocalización (lat/lng)
     latitud = Column(Float, nullable=True)
     longitud = Column(Float, nullable=True)
+
+    # NUEVO: Control de acceso por pago
+    suscripcion_activa = Column(Boolean, default=False)
+
     # 3. AGREGAR ESTA RELACIÓN MUCHOS A MUCHOS
     especialidades = relationship("Especialidad", secondary=taller_especialidad, back_populates="talleres")
     personal = relationship("PersonalTaller", back_populates="taller", foreign_keys="PersonalTaller.taller_id")
