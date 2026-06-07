@@ -485,6 +485,79 @@ def obtener_lista_chats_activos(db: Session = Depends(get_db), current_user: Usu
         })
     return resultado
 
+@router.get("/personal/mis-atenciones", response_model=List[schemas.EmergenciaResponse])
+def get_emergencias_personal(db: Session = Depends(get_db), current_user: Usuario = Depends(get_current_user)):
+    if current_user.rol.value not in ["personal_taller", "admin_taller"]:
+        raise HTTPException(status_code=403, detail="Solo personal o administrador del taller puede ver las atenciones")
+    
+    if current_user.rol.value == "personal_taller":
+        return db.query(models.Emergencia).filter(
+            models.Emergencia.id_personal == current_user.id,
+            models.Emergencia.estado == models.EstadoEmergencia.atendiendo
+        ).order_by(models.Emergencia.fecha_creacion.desc()).all()
+    else:
+        # Si es Admin, ve todas las del taller que están atendiendo
+        return db.query(models.Emergencia).filter(
+            models.Emergencia.id_taller == current_user.id,
+            models.Emergencia.estado == models.EstadoEmergencia.atendiendo
+        ).order_by(models.Emergencia.fecha_creacion.desc()).all()
+
+@router.post("/{nro}/ubicacion")
+async def actualizar_ubicacion_personal(nro: int, req: schemas.UbicacionUpdate, db: Session = Depends(get_db), current_user: Usuario = Depends(get_current_user)):
+    if current_user.rol.value != "personal_taller":
+         raise HTTPException(status_code=403, detail="Solo el personal asignado puede actualizar su ubicación")
+
+    emergencia = db.query(models.Emergencia).filter(models.Emergencia.nro == nro).first()
+    if not emergencia:
+        raise HTTPException(status_code=404, detail="Emergencia no encontrada")
+    
+    if emergencia.id_personal != current_user.id:
+        raise HTTPException(status_code=403, detail="No estás asignado a esta emergencia")
+
+    detalle = db.query(models.DetalleEmergencia).filter(models.DetalleEmergencia.nro_emergencia == nro).first()
+    if not detalle:
+        detalle = models.DetalleEmergencia(nro_emergencia=nro)
+        db.add(detalle)
+    
+    nueva_ubicacion = f"{req.latitud},{req.longitud}"
+    detalle.ubicacion_personal_real = nueva_ubicacion
+
+    # Recalcular ETA simplificado
+    if emergencia.ubicacion_real:
+        try:
+            parts = emergencia.ubicacion_real.split(",")
+            client_lat = float(parts[0].strip())
+            client_lon = float(parts[1].strip())
+            dist = calculate_distance(req.latitud, req.longitud, client_lat, client_lon)
+            minutos = int(dist * 2.5 + 2)
+            detalle.tiempo_llegada_estimado = f"{minutos} min"
+        except:
+            pass
+
+    db.commit()
+
+    # Notificar al cliente por WS
+    vehiculo = db.query(Vehiculo).filter(Vehiculo.id == emergencia.id_vehiculo).first()
+    if vehiculo:
+        await manager.send_to_client(vehiculo.cliente_id, {
+            "type": "LOCATION_UPDATE",
+            "data": {
+                "nro": nro,
+                "latitud": req.latitud,
+                "longitud": req.longitud,
+                "eta": detalle.tiempo_llegada_estimado
+            }
+        })
+
+    return {"status": "ok", "ubicacion": nueva_ubicacion, "eta": detalle.tiempo_llegada_estimado}
+
+@router.get("/{nro}/tracking", response_model=schemas.DetalleEmergenciaResponse)
+def get_tracking_info(nro: int, db: Session = Depends(get_db)):
+    detalle = db.query(models.DetalleEmergencia).filter(models.DetalleEmergencia.nro_emergencia == nro).first()
+    if not detalle:
+        raise HTTPException(status_code=404, detail="No hay información de seguimiento")
+    return detalle
+
 @router.post("/{nro}/calificar")
 def calificar_emergencia(nro: int, req: schemas.CalificarEmergenciaRequest, db: Session = Depends(get_db), current_user: Usuario = Depends(get_current_user)):
     if current_user.rol.value != "cliente":

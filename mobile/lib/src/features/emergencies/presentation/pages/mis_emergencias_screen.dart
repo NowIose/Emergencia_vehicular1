@@ -3,6 +3,9 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/network/emergencia_service.dart';
 import 'package:intl/intl.dart';
 import 'emergencia_detail_screen.dart';
+import '../../../tracking/presentation/pages/tracking_screen.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:jwt_decoder/jwt_decoder.dart';
 
 class MisEmergenciasScreen extends StatefulWidget {
   const MisEmergenciasScreen({super.key});
@@ -13,15 +16,29 @@ class MisEmergenciasScreen extends StatefulWidget {
 
 class _MisEmergenciasScreenState extends State<MisEmergenciasScreen> {
   final EmergenciaService _emergenciaService = EmergenciaService();
+  final _storage = const FlutterSecureStorage();
   List<dynamic> _pendientes = [];
   List<dynamic> _enProceso = [];
   List<dynamic> _finalizadas = [];
   bool _isLoading = true;
+  int? _userId;
 
   @override
   void initState() {
     super.initState();
+    _cargarUserData();
     _cargarEmergencias();
+  }
+
+  Future<void> _cargarUserData() async {
+    String? token = await _storage.read(key: 'jwt_token');
+    if (token != null && !JwtDecoder.isExpired(token)) {
+      Map<String, dynamic> decodedToken = JwtDecoder.decode(token);
+      setState(() {
+        String? sub = decodedToken['sub']?.toString();
+        _userId = int.tryParse(sub ?? '');
+      });
+    }
   }
 
   Future<void> _cargarEmergencias() async {
@@ -48,14 +65,13 @@ class _MisEmergenciasScreenState extends State<MisEmergenciasScreen> {
         });
       }
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
-      }
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+      });
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
     }
   }
 
@@ -139,7 +155,7 @@ class _MisEmergenciasScreenState extends State<MisEmergenciasScreen> {
                         ratingSeleccionado,
                         comentarioController.text,
                       );
-                      if (mounted) {
+                      if (context.mounted) {
                         Navigator.pop(context);
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
@@ -149,7 +165,7 @@ class _MisEmergenciasScreenState extends State<MisEmergenciasScreen> {
                         _cargarEmergencias();
                       }
                     } catch (e) {
-                      if (mounted) {
+                      if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(content: Text('Error: ${e.toString()}')),
                         );
@@ -574,29 +590,56 @@ class _MisEmergenciasScreenState extends State<MisEmergenciasScreen> {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () => _verDetalle(emer),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(
-                          0xFFAF101A,
-                        ), // primary-container
-                        foregroundColor: Colors.white,
-                        elevation: 2,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                      ),
-                      child: const Text(
-                        'Ver Detalles del Servicio',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'Manrope',
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => _verDetalle(emer),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFF191C1D),
+                            side: const BorderSide(color: Colors.grey),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                          child: const Text('Detalles'),
                         ),
                       ),
-                    ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            if (_userId != null) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => TrackingScreen(
+                                    nroEmergencia: emer['nro'],
+                                    ubicacionCliente: emer['ubicacion_real'],
+                                    idCliente: _userId!,
+                                  ),
+                                ),
+                              );
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue[700],
+                            foregroundColor: Colors.white,
+                            elevation: 2,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                          icon: const Icon(Icons.map, size: 18),
+                          label: const Text(
+                            'Seguir en Mapa',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),

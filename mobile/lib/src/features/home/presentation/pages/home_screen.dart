@@ -20,6 +20,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final _storage = const FlutterSecureStorage();
   String userName = "Usuario"; // Nombre por defecto
+  String? _userRole;
   int? _userId;
 
   List<WorkshopModel> _topWorkshops = [];
@@ -71,6 +72,7 @@ class _HomeScreenState extends State<HomeScreen> {
         setState(() {
           // 3. Extraemos el campo 'name' que configuramos en FastAPI
           userName = decodedToken['name'] ?? "Usuario";
+          _userRole = decodedToken['rol']; // Corregido: 'rol' en lugar de 'role'
           
           // Extraemos el ID del usuario (sub)
           String? sub = decodedToken['sub']?.toString();
@@ -202,25 +204,41 @@ class _HomeScreenState extends State<HomeScreen> {
                       );
                     },
                   ),
-                  ListTile(
-                    leading: Icon(Icons.car_crash, color: AppColors.primary),
-                    title: const Text(
-                      'Mis Emergencias',
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    onTap: () {
-                      Navigator.pop(context); // Cierra el menú lateral primero
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const MisEmergenciasScreen(),
+                  if (_userRole == "personal_taller" || _userRole == "admin_taller")
+                    ListTile(
+                      leading: const Icon(Icons.assignment, color: AppColors.primary),
+                      title: Text(
+                        _userRole == "admin_taller" ? 'Seguimiento (Taller)' : 'Mis Atenciones',
+                        style: const TextStyle(
+                          fontFamily: 'Inter',
+                          fontWeight: FontWeight.w600,
                         ),
-                      );
-                    },
-                  ),
+                      ),
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.pushNamed(context, '/personnel-tracking');
+                      },
+                    )
+                  else
+                    ListTile(
+                      leading: Icon(Icons.car_crash, color: AppColors.primary),
+                      title: const Text(
+                        'Mis Emergencias',
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      onTap: () {
+                        Navigator.pop(context); // Cierra el menú lateral primero
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const MisEmergenciasScreen(),
+                          ),
+                        );
+                      },
+                    ),
                   // Puedes agregar más opciones aquí después...
                 ],
               ),
@@ -390,6 +408,22 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ],
                     ),
+                    const SizedBox(height: 16),
+                    
+                    if (_userRole == "personal_taller" || _userRole == "admin_taller")
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 32.0),
+                        child: GestureDetector(
+                          onTap: () => Navigator.pushNamed(context, '/personnel-tracking'),
+                          child: _buildBentoCard(
+                            icon: Icons.delivery_dining,
+                            iconColor: Colors.green,
+                            iconBgColor: Colors.green.withValues(alpha: 0.1),
+                            title: _userRole == "admin_taller" ? 'Seguimiento (Taller)' : 'Panel de Seguimiento (Personal)',
+                          ),
+                        ),
+                      ),
+                    
                     const SizedBox(height: 32),
 
                     // Featured Workshops

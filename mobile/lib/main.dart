@@ -9,6 +9,7 @@ import 'src/features/auth/presentation/pages/login_screen.dart';
 import 'package:mobile/src/features/home/presentation/pages/home_screen.dart';
 import 'src/features/messages/presentation/pages/messages_screen.dart'; // Importa la pantalla
 import 'package:mobile/src/features/workshops/presentation/pages/workshops_screen.dart';
+import 'package:mobile/src/features/tracking/presentation/pages/personnel_tracking_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -46,6 +47,7 @@ class KineticTrustApp extends StatelessWidget {
             '/home': (context) => const HomeScreen(),
             '/messages': (context) => const MessagesScreen(),
             '/workshops': (context) => const WorkshopsScreen(),
+            '/personnel-tracking': (context) => const PersonnelTrackingPage(),
           },
         );
       },

@@ -103,3 +103,7 @@ class BuscarTalleresRequest(BaseModel):
     ubicacion_cliente: str # "lat,lng"
     especialidad: str
     radio_km: float
+
+class UbicacionUpdate(BaseModel):
+    latitud: float
+    longitud: float

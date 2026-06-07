@@ -79,4 +79,55 @@ class EmergenciaService {
       throw Exception(errorBody['detail'] ?? 'Error al calificar emergencia');
     }
   }
+
+  // --- NUEVOS MÉTODOS PARA TRACKING ---
+
+  Future<List<dynamic>> getAtencionesPersonal() async {
+    final token = await _storage.read(key: 'jwt_token');
+    final response = await http.get(
+      Uri.parse("$_baseUrl/emergencias/personal/mis-atenciones"),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Error al obtener atenciones');
+    }
+  }
+
+  Future<void> updateUbicacion(int nro, double lat, double lng) async {
+    final token = await _storage.read(key: 'jwt_token');
+    final response = await http.post(
+      Uri.parse("$_baseUrl/emergencias/$nro/ubicacion"),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        "latitud": lat,
+        "longitud": lng,
+      }),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Error al actualizar ubicación');
+    }
+  }
+
+  Future<Map<String, dynamic>> getTrackingInfo(int nro) async {
+    final response = await http.get(
+      Uri.parse("$_baseUrl/emergencias/$nro/tracking"),
+      headers: {'Content-Type': 'application/json'},
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Error al obtener info de tracking');
+    }
+  }
 }

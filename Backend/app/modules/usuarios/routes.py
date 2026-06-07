@@ -4,7 +4,7 @@ from sqlalchemy import func
 from passlib.context import CryptContext
 
 from app.core.database import get_db
-from .models import Taller, UserRole, Cliente, CalificacionTaller, Especialidad, taller_especialidad
+from .models import Taller, UserRole, Cliente, CalificacionTaller, Especialidad, taller_especialidad, PersonalTaller
 from .schemas import TallerCreate, ClienteCreate
 from app.modules.bitacora.utils import registrar_evento
 

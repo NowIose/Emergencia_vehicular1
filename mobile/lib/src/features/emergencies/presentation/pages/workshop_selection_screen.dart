@@ -27,6 +27,7 @@ class WorkshopSelectionScreen extends StatefulWidget {
 
 class _WorkshopSelectionScreenState extends State<WorkshopSelectionScreen> {
   MapboxMap? mapboxMap;
+  CircleAnnotationManager? circleAnnotationManager;
   PointAnnotationManager? pointAnnotationManager;
   int? _selectedWorkshopId;
   late Point _clientPoint;
@@ -55,6 +56,11 @@ class _WorkshopSelectionScreenState extends State<WorkshopSelectionScreen> {
 
   void _onMapCreated(MapboxMap mapboxMap) {
     this.mapboxMap = mapboxMap;
+    
+    mapboxMap.annotations.createCircleAnnotationManager().then((value) {
+      circleAnnotationManager = value;
+      _addMarkers();
+    });
     mapboxMap.annotations.createPointAnnotationManager().then((value) {
       pointAnnotationManager = value;
       _addMarkers();
@@ -62,28 +68,55 @@ class _WorkshopSelectionScreenState extends State<WorkshopSelectionScreen> {
   }
 
   Future<void> _addMarkers() async {
-    if (pointAnnotationManager == null) return;
+    if (circleAnnotationManager == null || pointAnnotationManager == null) return;
     
     // Limpiar marcadores previos
+    await circleAnnotationManager!.deleteAll();
     await pointAnnotationManager!.deleteAll();
 
+    // --- MARCADOR CLIENTE ---
+    await circleAnnotationManager!.create(
+      CircleAnnotationOptions(
+        geometry: _clientPoint,
+        circleColor: Colors.redAccent.value,
+        circleRadius: 8.0,
+        circleStrokeWidth: 2.0,
+        circleStrokeColor: Colors.white.value,
+      ),
+    );
     await pointAnnotationManager!.create(
       PointAnnotationOptions(
         geometry: _clientPoint,
-        textField: "Tu Ubicación",
-        iconImage: "marker-15",
+        textField: "TÚ",
+        textOffset: [0, -2],
+        textSize: 10.0,
+        textColor: Colors.redAccent.value,
       ),
     );
 
+    // --- MARCADORES TALLERES ---
     for (var taller in _currentTalleres) {
       final lat = taller['latitud']?.toDouble() ?? (_clientPoint.coordinates.lat + 0.002);
       final lng = taller['longitud']?.toDouble() ?? (_clientPoint.coordinates.lng + 0.002);
+      final point = Point(coordinates: Position(lng, lat));
+
+      await circleAnnotationManager!.create(
+        CircleAnnotationOptions(
+          geometry: point,
+          circleColor: Colors.indigoAccent.value,
+          circleRadius: 7.0,
+          circleStrokeWidth: 2.0,
+          circleStrokeColor: Colors.white.value,
+        ),
+      );
 
       await pointAnnotationManager!.create(
         PointAnnotationOptions(
-          geometry: Point(coordinates: Position(lng, lat)),
+          geometry: point,
           textField: taller['nombre_taller'],
-          iconImage: "car-repair-15",
+          textOffset: [0, -2],
+          textSize: 9.0,
+          textColor: Colors.indigoAccent.value,
         ),
       );
     }
