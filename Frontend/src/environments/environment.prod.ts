@@ -1,6 +1,5 @@
-// ARCHIVO GENERADO AUTOMÁTICAMENTE - NO EDITAR MANUALMENTE
 export const environment = {
   production: true,
-  apiUrl: 'https://emergencia-vehicular-55a2.onrender.com',
- 
+  apiUrl: 'https://emergencia-vehicular-55a2.onrender.com', // Tu backend en la nube
+  mapboxToken: '', // REEMPLAZAR CON TU TOKEN DE MAPBOX
 };
