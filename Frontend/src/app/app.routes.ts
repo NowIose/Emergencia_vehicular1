@@ -10,7 +10,7 @@ import { FacturacionComponent } from './features/home/facturacion/facturacion.co
 import { FacturacionAdminComponent } from './features/home/facturacion-admin/facturacion-admin.component';
 import { BitacoraComponent } from './features/taller/bitacora/bitacora.component';
 import { ReportesComponent } from './features/reportes/reportes.component';
-import { ReportesAdminComponent }  from './features/reportes-admin/reportes-admin.component';;
+import { ReportesAdminComponent } from './features/reportes-admin/reportes-admin.component';
 import { BackupsComponent } from './features/home/Backups/Backups.component';
 
 export const routes: Routes = [
