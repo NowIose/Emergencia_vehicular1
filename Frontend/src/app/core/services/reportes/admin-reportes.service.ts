@@ -30,4 +30,18 @@ export class AdminReportesService {
 
     return this.http.post<any>(`${this.apiUrl}/filtro-voz`, formData, { headers });
   }
+  getKPIsDashboard(tenantId?: number) {
+    // Extraemos el token correcto de tu localStorage
+    const token = localStorage.getItem('access_token');
+    const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
+
+    let params = new HttpParams();
+    // Si viene el id del taller (tenant), lo seteamos limpiamente en los parámetros
+    if (tenantId) {
+      params = params.set('tenant_id', tenantId.toString());
+    }
+
+    // Enviamos la petición GET con la llave de acceso (headers) y los parámetros correspondientes
+    return this.http.get<any>(`${this.apiUrl}/kpis-dashboard`, { headers, params });
+  }
 }

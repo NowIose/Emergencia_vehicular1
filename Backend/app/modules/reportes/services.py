@@ -1,9 +1,13 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, case
 from app.modules.usuarios import models as user_models
+from app.modules.emergencias.models import Emergencia as EmergenciaModel, DetalleEmergencia as DetalleModel
 import httpx
 import json
 import os
+from datetime import timedelta
+import re
+
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
 def obtener_reporte_usuarios(db: Session, rol_filtro: str = None, orden: str = None):
@@ -119,3 +123,65 @@ async def procesar_audio_filtros(file):
         respuesta_json = resp_llm.json()['choices'][0]['message']['content']
         print(respuesta_json)
         return json.loads(respuesta_json)
+    
+# Asegúrate de importar tus modelos de emergencia en la cabecera
+# from app.modules.emergencias.models import Emergencia, EstadoEmergencia, DetalleEmergencia
+
+def obtener_kpis_dashboard(db: Session, tenant_id: int = None):
+    # --- 1. FILTRO BASE ---
+    query_base = db.query(EmergenciaModel)
+    if tenant_id:
+        query_base = query_base.filter(EmergenciaModel.id_taller == tenant_id)
+
+    # --- 2. CASOS CANCELADOS ---
+    # Busca el string de tu Enum "cancelado"
+    casos_cancelados = query_base.filter(EmergenciaModel.estado == "cancelado").count()
+
+    # --- 3. INCIDENTES POR TIPO (Usando la IA) ---
+    tipos_raw = db.query(
+        EmergenciaModel.especialidad_ia, func.count(EmergenciaModel.nro)
+    ).group_by(EmergenciaModel.especialidad_ia).all()
+    
+    incidentes_por_tipo = {}
+    for tipo, cant in tipos_raw:
+        nombre_tipo = tipo if tipo and tipo.strip() else "Otros / Sin clasificar"
+        incidentes_por_tipo[nombre_tipo] = cant
+
+    # --- 4. TIEMPOS Y SLA (El truco con DetalleEmergencia) ---
+    # Solo tomamos los que ya terminaron para que sea una métrica real
+    emergencias_terminadas = query_base.filter(EmergenciaModel.estado == "terminado").all()
+    
+    tiempos_llegada = []
+    
+    for em in emergencias_terminadas:
+        if em.detalles and em.detalles.tiempo_llegada_estimado:
+            # Esto saca solo los números de un string como "15 mins" -> 15
+            numeros = re.findall(r'\d+', em.detalles.tiempo_llegada_estimado)
+            if numeros:
+                tiempos_llegada.append(int(numeros[0]))
+                
+    # Matemáticas para Promedios
+    promedio_llegada = sum(tiempos_llegada) / len(tiempos_llegada) if tiempos_llegada else 0
+    
+    # SLA: Asumimos que la meta es llegar en 30 minutos o menos
+    cumplen_sla = sum(1 for t in tiempos_llegada if t <= 30)
+    nivel_sla = (cumplen_sla / len(tiempos_llegada)) * 100 if tiempos_llegada else 0
+
+    # --- 5. TALLERES MÁS EFICIENTES (Top 3) ---
+    talleres_eficientes = db.query(
+        EmergenciaModel.id_taller, func.count(EmergenciaModel.nro).label('total_terminados')
+    ).filter(EmergenciaModel.estado == "terminado")\
+     .group_by(EmergenciaModel.id_taller)\
+     .order_by(func.count(EmergenciaModel.nro).desc()).limit(3).all()
+
+    # Formateamos el resultado del Top de Talleres
+    top_talleres = [{"id_taller": t[0], "completados": t[1]} for t in talleres_eficientes]
+
+    # --- RETORNO DE DATOS AL FRONTEND ---
+    return {
+        "tiempo_promedio_llegada": f"{round(promedio_llegada, 1)} min",
+        "casos_cancelados": casos_cancelados,
+        "incidentes_por_tipo": incidentes_por_tipo,
+        "nivel_sla": f"{round(nivel_sla, 1)}%",
+        "talleres_eficientes": top_talleres
+    }

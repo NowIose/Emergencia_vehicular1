@@ -6,7 +6,6 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import * as XLSX from 'xlsx';
 import { color } from 'chart.js/helpers';
-
 @Component({
   selector: 'app-reportes-admin',
   standalone: true, // <--- IMPORTANTE: Asegúrate que diga true
@@ -25,9 +24,16 @@ export class ReportesAdminComponent implements OnInit {
   mediaRecorder: any;
   audioChunks: any[] = [];
   isProcessingVoice: boolean = false; // Para mostrar un loader mientras la IA piensa
-
+  kpis: any = {
+    tiempo_promedio_llegada: '0 min',
+    casos_cancelados: 0,
+    nivel_sla: '0%',
+    incidentes_por_tipo: {},
+    talleres_eficientes: [],
+  };
   ngOnInit() {
     this.cargarDatos();
+    this.cargarKPIs();
   }
 
   cargarDatos() {
@@ -41,7 +47,18 @@ export class ReportesAdminComponent implements OnInit {
       this.usuarios = data;
     });
   }
-
+  // 3. El método para obtener los KPIs
+  cargarKPIs() {
+    this.reportesService.getKPIsDashboard().subscribe({
+      next: (data: any) => {
+        this.kpis = data;
+        this.cdr.detectChanges(); // Forzamos a Angular a repintar el HTML
+      },
+      error: (err) => {
+        console.error('Error cargando los KPIs del Dashboard', err);
+      },
+    });
+  }
   descargarPDF() {
     const DATA = document.getElementById('tablaAdmin'); // El ID de tu tabla
     const doc = new jsPDF('p', 'pt', 'a4');
