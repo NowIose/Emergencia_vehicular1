@@ -35,3 +35,16 @@ async def filtro_por_voz(
     filtros = await services.procesar_audio_filtros(file)
     print(filtros)
     return filtros
+
+@router.get("/kpis-dashboard")
+def kpis_operacionales(
+    tenant_id: Optional[int] = Query(None, description="ID del taller para filtrar (opcional)"),
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user)
+):
+    # Si el usuario logueado es un taller, forzamos su propio ID para que solo vea sus datos
+    if current_user.tipo_perfil == "taller":
+        return services.obtener_kpis_dashboard(db, tenant_id=current_user.id)
+    
+    # Si es un Admin global, puede ver de todos o filtrar por uno específico
+    return services.obtener_kpis_dashboard(db, tenant_id=tenant_id)
