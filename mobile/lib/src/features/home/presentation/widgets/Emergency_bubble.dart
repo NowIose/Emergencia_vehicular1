@@ -232,28 +232,35 @@ class _EmergencyBubbleState extends State<EmergencyBubble> {
           // PASO 3: SI SELECCIONÓ TALLER, CREAR EMERGENCIA DEFINITIVA
           if (tallerSeleccionadoId != null) {
             final urlCreate = Uri.parse('$_baseUrl/emergencias/');
-            final responseFinal = await http.post(
-              urlCreate,
-              headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                if (token != null) 'Authorization': 'Bearer $token',
-              },
-              body: jsonEncode({
-                "id_vehiculo": _vehiculoSeleccionado,
-                "ubicacion_real": _ubicacionActual,
-                "descripcion": _descripcionController.text,
-                "prioridad": dataPre['prioridad'],
-                "fotos": fotosUrls,
-                "id_taller": tallerSeleccionadoId
-              }),
-            );
+            try {
+              final responseFinal = await http.post(
+                urlCreate,
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Accept': 'application/json',
+                  if (token != null) 'Authorization': 'Bearer $token',
+                },
+                body: jsonEncode({
+                  "id_vehiculo": _vehiculoSeleccionado,
+                  "ubicacion_real": _ubicacionActual,
+                  "descripcion": _descripcionController.text,
+                  "prioridad": dataPre['prioridad'],
+                  "fotos": fotosUrls,
+                  "id_taller": tallerSeleccionadoId
+                }),
+              ).timeout(const Duration(seconds: 12));
 
-            if (responseFinal.statusCode >= 200 && responseFinal.statusCode < 300) {
-              if (mounted) Navigator.pop(context); 
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('🚨 Alerta enviada al taller con éxito')));
-              _limpiarFormulario();
+              if (responseFinal.statusCode >= 200 && responseFinal.statusCode < 300) {
+                if (mounted) Navigator.pop(context); 
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('🚨 Alerta enviada al taller con éxito')));
+                _limpiarFormulario();
+              } else {
+                await _guardarEmergenciaLocal(idTaller: tallerSeleccionadoId);
+              }
+            } catch (e) {
+              await _guardarEmergenciaLocal(idTaller: tallerSeleccionadoId);
             }
+            return; // Salir para no caer en el catch externo
           }
         }
       } else {
@@ -261,11 +268,14 @@ class _EmergencyBubbleState extends State<EmergencyBubble> {
         await _enviarFlujoDirecto(fotosUrls);
       }
     } on SocketException {
-      // CAPTURA OFFLINE: Sigue funcionando igual que antes
+      // CAPTURA OFFLINE: Si falla el pre-análisis por red
       await _guardarEmergenciaLocal();
     } catch (e) {
       debugPrint("Error en envío: $e");
-      await _guardarEmergenciaLocal();
+      // Evitar guardar doble si ya se guardó arriba
+      if (_descripcionController.text.isNotEmpty) {
+        await _guardarEmergenciaLocal();
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -283,32 +293,38 @@ class _EmergencyBubbleState extends State<EmergencyBubble> {
     String? token = await storage.read(key: 'jwt_token');
     final url = Uri.parse('$_baseUrl/emergencias/');
 
-    final response = await http.post(
-      url,
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        if (token != null) 'Authorization': 'Bearer $token',
-      },
-      body: jsonEncode({
-        "id_vehiculo": _vehiculoSeleccionado,
-        "ubicacion_real": _ubicacionActual,
-        "descripcion": _descripcionController.text,
-        "prioridad": "alta",
-        "fotos": fotosUrls,
-      }),
-    ).timeout(const Duration(seconds: 10));
+    try {
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          "id_vehiculo": _vehiculoSeleccionado,
+          "ubicacion_real": _ubicacionActual,
+          "descripcion": _descripcionController.text,
+          "prioridad": "alta",
+          "fotos": fotosUrls,
+        }),
+      ).timeout(const Duration(seconds: 12));
 
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      if (mounted) Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('🚨 Alerta enviada exitosamente')));
-      _limpiarFormulario();
-      _sincronizarEmergenciasPendientes();
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        if (mounted) Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('🚨 Alerta enviada exitosamente')));
+        _limpiarFormulario();
+        _sincronizarEmergenciasPendientes();
+      } else {
+        await _guardarEmergenciaLocal();
+      }
+    } catch (e) {
+      await _guardarEmergenciaLocal();
     }
   }
 
   // LÓGICA OFFLINE (RESTAURADA TOTALMENTE)
-  Future<void> _guardarEmergenciaLocal() async {
+  Future<void> _guardarEmergenciaLocal({int? idTaller}) async {
     try {
       const storage = FlutterSecureStorage();
       String? pendientesStr = await storage.read(key: 'emergencias_pendientes');
@@ -319,6 +335,7 @@ class _EmergencyBubbleState extends State<EmergencyBubble> {
         "ubicacion_real": _ubicacionActual,
         "descripcion": _descripcionController.text,
         "prioridad": "alta",
+        "id_taller": idTaller,
         "fotos_locales": _fotosTomadas.map((f) => f.path).toList(),
         "fecha_creacion": DateTime.now().toIso8601String(),
       });
@@ -359,10 +376,17 @@ class _EmergencyBubbleState extends State<EmergencyBubble> {
             "descripcion": em["descripcion"],
             "prioridad": em["prioridad"],
             "fotos": urls,
+            "id_taller": em["id_taller"], // IMPORTANTE
           }),
         );
         if (resp.statusCode >= 200 && resp.statusCode < 300) {
           debugPrint("✅ Offline sincronizado");
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('✅ Auxilio offline enviado con éxito'),
+              backgroundColor: Colors.green,
+            ));
+          }
         } else {
           noEnviados.add(em);
         }

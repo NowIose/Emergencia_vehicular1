@@ -148,6 +148,34 @@ async def create_emergencia(emergencia: schemas.EmergenciaCreate, fastapi_reques
     if prioridad_sugerida in [p.value for p in models.PrioridadEmergencia]:
         db_emergencia.prioridad = prioridad_sugerida
 
+    # --- RESTAURACIÓN LÓGICA OFFLINE: Asignación por especialidad si no se eligió taller ---
+    if not db_emergencia.id_taller:
+        try:
+            parts = db_emergencia.ubicacion_real.split(",")
+            lat_c = float(parts[0].strip())
+            lon_c = float(parts[1].strip())
+            
+            talleres_db = db.query(Taller).all()
+            mejor_taller = None
+            menor_distancia = float('inf')
+
+            for t in talleres_db:
+                if t.latitud and t.longitud:
+                    dist = calculate_distance(lat_c, lon_c, t.latitud, t.longitud)
+                    nombres_esp = [e.nombre.lower() for e in t.especialidades]
+                    
+                    # Coincidencia de especialidad Y el más cercano
+                    if db_emergencia.especialidad_ia.lower() in nombres_esp or not t.especialidades:
+                        if dist < menor_distancia:
+                            menor_distancia = dist
+                            mejor_taller = t
+            
+            if mejor_taller:
+                db_emergencia.id_taller = mejor_taller.id
+                registrar_evento(db, fastapi_request, "Asignación Automática Offline", f"Emergencia {db_emergencia.nro} asignada a {mejor_taller.nombre_taller} por especialidad ({db_emergencia.especialidad_ia})", usuario=current_user)
+        except Exception as e:
+            print(f"Error en asignación automática offline: {e}")
+
     db.commit()
     db.refresh(db_emergencia)
 
