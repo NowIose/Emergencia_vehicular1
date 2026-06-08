@@ -92,6 +92,14 @@
       >
         <span class="material-symbols-outlined">backup</span> Respaldos BD
       </a>
+      <a
+        *ngIf="userRole !== 'admin_sistema'"
+        routerLink="/home/facturacion-servicios"
+        routerLinkActive="opacity-100 bg-white/10"
+        class="flex items-center gap-3 p-3 hover:bg-white/10 rounded-2xl cursor-pointer opacity-70 transition-all text-blue-400"
+      >
+        <span class="material-symbols-outlined">receipt_long</span> Servicios
+      </a>
     </nav>
 
     <div class="mt-auto pt-6 border-t border-white/10">

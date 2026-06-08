@@ -106,6 +106,31 @@
           </div>
         </div>
       </div>
+      <div *ngIf="emergenciaParaCobrar() !== null" class="fixed inset-0 z-[110] flex items-center justify-center p-4">
+  <div class="absolute inset-0 bg-secondary/80 backdrop-blur-md" (click)="cancelarCobro()"></div>
+  <div class="bg-white rounded-[2rem] w-full max-w-md p-8 relative z-10 animate-in fade-in zoom-in duration-200 shadow-2xl">
+    <div class="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+      <span class="material-symbols-outlined text-3xl">payments</span>
+    </div>
+    <h3 class="text-2xl font-black text-center text-slate-800 mb-2">Finalizar y Facturar</h3>
+    <p class="text-center text-slate-500 mb-6 text-sm">Ingrese el costo total del servicio para generar la orden de pago al cliente.</p>
+    
+    <div class="mb-6 relative">
+      <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-black">$</span>
+      <input 
+        type="number" 
+        [(ngModel)]="montoCobro" 
+        placeholder="0.00" 
+        class="w-full bg-slate-50 border-2 border-slate-200 rounded-2xl py-4 pl-10 pr-4 text-2xl font-black text-slate-800 focus:border-green-500 focus:bg-white outline-none transition-all text-center"
+      >
+    </div>
+
+    <div class="flex gap-3">
+      <button (click)="cancelarCobro()" class="flex-1 bg-slate-100 text-slate-600 font-bold py-4 rounded-xl hover:bg-slate-200 transition-colors">Cancelar</button>
+      <button (click)="confirmarTerminadoYPrecio()" class="flex-1 bg-green-500 text-white font-black py-4 rounded-xl hover:bg-green-600 shadow-lg shadow-green-500/30 transition-all">Generar Cobro</button>
+    </div>
+  </div>
+</div>
 
       <div class="pt-4 border-t border-slate-100 pl-2">
         <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">

@@ -130,4 +130,59 @@ class EmergenciaService {
       throw Exception('Error al obtener info de tracking');
     }
   }
+
+  // --- NUEVOS MÉTODOS PARA PAGOS ---
+
+  Future<void> setEmergenciaPrecio(int nro, double monto) async {
+    final token = await _storage.read(key: 'jwt_token');
+    final response = await http.post(
+      Uri.parse("$_baseUrl/pagos/emergencia/set-precio"),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        "nro_emergencia": nro,
+        "monto": monto,
+        "moneda": "usd"
+      }),
+    );
+
+    if (response.statusCode != 200) {
+      final error = jsonDecode(response.body);
+      throw Exception(error['detail'] ?? 'Error al fijar precio');
+    }
+  }
+
+  Future<Map<String, dynamic>> getPaymentInfo(int nro) async {
+    final response = await http.get(
+      Uri.parse("$_baseUrl/pagos/emergencia/$nro"),
+      headers: {'Content-Type': 'application/json'},
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Sin información de pago');
+    }
+  }
+
+  Future<String> payEmergencia(int nro) async {
+    final token = await _storage.read(key: 'jwt_token');
+    final response = await http.post(
+      Uri.parse("$_baseUrl/pagos/emergencia/pagar"),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({"nro_emergencia": nro}),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body)['checkout_url'];
+    } else {
+      final error = jsonDecode(response.body);
+      throw Exception(error['detail'] ?? 'Error al iniciar pago');
+    }
+  }
 }

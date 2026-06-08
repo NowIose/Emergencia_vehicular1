@@ -28,3 +28,19 @@ class SuscripcionTaller(Base):
     actualizado_en = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     taller = relationship("app.modules.usuarios.models.Taller", backref="suscripcion")
+
+class PagoEmergencia(Base):
+    __tablename__ = "pagos_emergencia"
+
+    id = Column(Integer, primary_key=True, index=True)
+    nro_emergencia = Column(Integer, ForeignKey("emergencias.nro", ondelete="CASCADE"), unique=True, nullable=False)
+    monto = Column(Integer, nullable=False) # Monto en centavos
+    moneda = Column(String(10), default="usd")
+    pagado = Column(Boolean, default=False)
+    fecha_pago = Column(DateTime, nullable=True)
+    
+    stripe_session_id = Column(String(120), nullable=True)
+    stripe_payment_intent_id = Column(String(120), nullable=True)
+
+    # Relaciones
+    emergencia = relationship("app.modules.emergencias.models.Emergencia", backref="pago")

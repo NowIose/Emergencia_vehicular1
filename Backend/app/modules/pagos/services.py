@@ -246,3 +246,33 @@ def actualizar_factura(db: Session, invoice: Any) -> None:
         if taller: taller.suscripcion_activa = True
         
     db.commit()
+
+def crear_checkout_emergencia(db: Session, emergencia_nro: int, monto_decimal: float) -> Any:
+    configurar_stripe()
+    
+    # Convertir monto a centavos
+    monto_centavos = int(monto_decimal * 100)
+    
+    # URL de retorno
+    success_url = f"{settings.FRONTEND_URL}/pago-exitoso?nro={emergencia_nro}&session_id={{CHECKOUT_SESSION_ID}}"
+    cancel_url = f"{settings.FRONTEND_URL}/pago-cancelado?nro={emergencia_nro}"
+
+    session = stripe.checkout.Session.create(
+        mode="payment",
+        payment_method_types=["card"],
+        line_items=[{
+            "price_data": {
+                "currency": "usd",
+                "product_data": {
+                    "name": f"Servicio de Emergencia #{emergencia_nro}",
+                    "description": "Pago por servicios de asistencia vehicular",
+                },
+                "unit_amount": monto_centavos,
+            },
+            "quantity": 1,
+        }],
+        success_url=success_url,
+        cancel_url=cancel_url,
+        metadata={"nro_emergencia": str(emergencia_nro), "tipo_pago": "emergencia"},
+    )
+    return session

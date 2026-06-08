@@ -41,3 +41,21 @@ class SuscripcionResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class PagoEmergenciaCreate(BaseModel):
+    nro_emergencia: int
+    monto: float # En unidades (ej. 10.50), lo convertiremos a centavos
+    moneda: str = "usd"
+
+class PagoEmergenciaResponse(BaseModel):
+    nro_emergencia: int
+    monto: int
+    moneda: str
+    pagado: bool
+    fecha_pago: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+class EmergenciaCheckoutRequest(BaseModel):
+    nro_emergencia: int

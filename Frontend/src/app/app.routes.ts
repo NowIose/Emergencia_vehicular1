@@ -12,7 +12,7 @@ import { BitacoraComponent } from './features/taller/bitacora/bitacora.component
 import { ReportesComponent } from './features/reportes/reportes.component';
 import { ReportesAdminComponent } from './features/reportes-admin/reportes-admin.component';
 import { BackupsComponent } from './features/home/Backups/Backups.component';
-
+import { FacturacionServiciosComponent } from './features/home/facturacion-servicios/facturacion-servicios.component';
 export const routes: Routes = [
   { path: '', redirectTo: 'landing', pathMatch: 'full' },
   { path: 'landing', component: LandingComponent },
@@ -31,6 +31,7 @@ export const routes: Routes = [
       { path: 'backups', component: BackupsComponent },
       { path: 'facturacion', component: FacturacionComponent },
       { path: 'facturacion-global', component: FacturacionAdminComponent },
+      { path: 'facturacion-servicios', component: FacturacionServiciosComponent },
     ],
   },
 ];

@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { EmergenciaService } from '../../core/services/emergencia/emergencia.service';
+import { PagosService } from '../../core/services/pagos.service';
 
 // 1. Actualiza la interfaz para usar 'nro' como número
 export interface Emergencia {
@@ -41,6 +42,11 @@ export class EmergenciasTallerComponent implements OnInit {
 
   tallerLat: number = 0;
   tallerLon: number = 0;
+
+  private pagosService = inject(PagosService);
+  // Signals para el cobro
+  emergenciaParaCobrar = signal<number | null>(null);
+  montoCobro = signal<number | null>(null);
 
   abrirDetalle(eme: any) {
     // Asegurar que el objeto tenga el formato que el modal espera (vehiculo como string)
@@ -142,30 +148,62 @@ export class EmergenciasTallerComponent implements OnInit {
   }
 
   cambiarEstado(nro: number, nuevoEstado: any) {
-    const emergenciaActual = this.emergencias().find((e) => e.nro === nro);
-    if (!emergenciaActual) return;
+  const emergenciaActual = this.emergencias().find((e) => e.nro === nro);
+  if (!emergenciaActual) return;
 
-    const estadoAnterior = emergenciaActual.estado;
-    const transicionesValidas = this.REGLAS_ESTADO[estadoAnterior];
+  const estadoAnterior = emergenciaActual.estado;
+  const transicionesValidas = this.REGLAS_ESTADO[estadoAnterior];
 
-    if (!transicionesValidas.includes(nuevoEstado)) {
-      alert(`Movimiento no permitido de ${estadoAnterior} a ${nuevoEstado}.`);
+  if (!transicionesValidas.includes(nuevoEstado)) {
+    alert(`Movimiento no permitido de ${estadoAnterior} a ${nuevoEstado}.`);
+    this.cargarEmergencias(); // Resetea el select visualmente
+    return;
+  }
+
+  // ¡AQUÍ ESTÁ LA MAGIA! Si va a terminar, pedimos el precio primero.
+  if (nuevoEstado === 'terminado') {
+    this.emergenciaParaCobrar.set(nro);
+    return; 
+  }
+
+  this.ejecutarCambioEstado(nro, nuevoEstado);
+}
+
+  // 4. Añade estos métodos de apoyo:
+  ejecutarCambioEstado(nro: number, estado: string) {
+    this.emergenciaService.actualizarEstado(nro.toString(), estado).subscribe({
+      next: () => {
+        this.emergencias.update((emps) =>
+          emps.map((emp) => (emp.nro === nro ? { ...emp, estado: estado as Emergencia['estado'] } : emp)),
+        );
+      },
+      error: (err) => alert('Error al guardar: ' + (err.error?.detail || err.message))
+    });
+  }
+
+  confirmarTerminadoYPrecio() {
+    const nro = this.emergenciaParaCobrar();
+    const monto = this.montoCobro();
+    
+    if (!nro || !monto || monto <= 0) {
+      alert('Debe ingresar un monto válido.');
       return;
     }
 
-    // Asegúrate de convertir nro a string en la llamada al servicio si tu servicio lo pide como string,
-    // o cambia el servicio para que acepte number. FastAPI lo leerá bien de ambas formas en la URL.
-    this.emergenciaService.actualizarEstado(nro.toString(), nuevoEstado).subscribe({
-      next: (res) => {
-        this.emergencias.update((emps) =>
-          emps.map((emp) => (emp.nro === nro ? { ...emp, estado: nuevoEstado } : emp)),
-        );
-        console.log('Estado actualizado en la BD');
+    // Primero guardamos el precio, luego cerramos la emergencia
+    this.pagosService.fijarPrecioEmergencia(nro, monto, 'usd').subscribe({
+      next: () => {
+        this.ejecutarCambioEstado(nro, 'terminado');
+        this.cancelarCobro();
       },
-      error: (err) => {
-        alert('Error al guardar: ' + (err.error?.detail || err.message));
-      },
+      error: (err) => alert('Error al fijar precio: ' + err.message)
     });
+  }
+
+  cancelarCobro() {
+    this.emergenciaParaCobrar.set(null);
+    this.montoCobro.set(null);
+    this.cargarEmergencias(); // Refresca para revertir el select visualmente
   }
   // --- Helpers para el HTML ---
 

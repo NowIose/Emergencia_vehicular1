@@ -35,4 +35,19 @@ export class PagosService {
   obtenerStatsAdmin() {
     return this.http.get<any[]>(`${this.apiUrl}/admin/stats`, { headers: this.getHeaders() });
   }
+  
+  fijarPrecioEmergencia(nro_emergencia: number, monto: number, moneda: string = 'usd') {
+    return this.http.post<any>(
+      `${this.apiUrl}/emergencia/set-precio`,
+      { nro_emergencia, monto, moneda },
+      { headers: this.getHeaders() }
+    );
+  }
+
+  obtenerHistorialServicios() {
+    return this.http.get<any[]>(
+      `${this.apiUrl}/emergencia/taller/historial`,
+      { headers: this.getHeaders() }
+    );
+  }
 }

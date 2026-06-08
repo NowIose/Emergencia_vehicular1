@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/network/emergencia_service.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:jwt_decoder/jwt_decoder.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class EmergenciaDetailScreen extends StatefulWidget {
   final Map<String, dynamic> emergencia;
@@ -14,7 +17,91 @@ class EmergenciaDetailScreen extends StatefulWidget {
 
 class _EmergenciaDetailScreenState extends State<EmergenciaDetailScreen> {
   final EmergenciaService _emergenciaService = EmergenciaService();
+  final _storage = const FlutterSecureStorage();
   bool _isCalificando = false;
+  String? _userRole;
+  Map<String, dynamic>? _pagoInfo;
+  bool _isLoadingPago = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+    _loadPagoInfo();
+  }
+
+  Future<void> _loadUserData() async {
+    String? token = await _storage.read(key: 'jwt_token');
+    if (token != null && !JwtDecoder.isExpired(token)) {
+      Map<String, dynamic> decodedToken = JwtDecoder.decode(token);
+      setState(() {
+        _userRole = decodedToken['rol'];
+      });
+    }
+  }
+
+  Future<void> _loadPagoInfo() async {
+    try {
+      final info = await _emergenciaService.getPaymentInfo(widget.emergencia['nro']);
+      setState(() {
+        _pagoInfo = info;
+        _isLoadingPago = false;
+      });
+    } catch (e) {
+      setState(() => _isLoadingPago = false);
+    }
+  }
+
+  void _mostrarDialogoSetPrecio() {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Fijar Precio del Servicio'),
+        content: TextField(
+          controller: controller,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: const InputDecoration(
+            labelText: 'Monto (USD)',
+            prefixIcon: Icon(Icons.attach_money),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
+          ElevatedButton(
+            onPressed: () async {
+              double? monto = double.tryParse(controller.text);
+              if (monto != null) {
+                try {
+                  await _emergenciaService.setEmergenciaPrecio(widget.emergencia['nro'], monto);
+                  Navigator.pop(context);
+                  _loadPagoInfo();
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Precio fijado con éxito')));
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+                }
+              }
+            },
+            child: const Text('Guardar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _iniciarPagoStripe() async {
+    try {
+      final url = await _emergenciaService.payEmergencia(widget.emergencia['nro']);
+      final uri = Uri.parse(url);
+      
+      // Intentar abrir de la forma más compatible
+      if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+        throw 'No se pudo abrir la pasarela de pago';
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error al iniciar pago: $e')));
+    }
+  }
 
   void _mostrarDialogoCalificacion() {
     int puntuacion = 5;
@@ -267,6 +354,97 @@ class _EmergenciaDetailScreenState extends State<EmergenciaDetailScreen> {
               ),
 
             const SizedBox(height: 30),
+
+            // --- SECCIÓN DE PAGO ---
+            if (!_isLoadingPago) ...[
+              const Text(
+                'Información de Pago',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'Manrope',
+                  color: Color(0xFF191C1D),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.grey[300]!),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Costo del Servicio:', style: TextStyle(fontWeight: FontWeight.w500)),
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Text(
+                            _pagoInfo != null ? '\$${(_pagoInfo!['monto'] / 100).toStringAsFixed(2)} ${_pagoInfo!['moneda'].toUpperCase()}' : 'Pendiente',
+                            textAlign: TextAlign.right,
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: _pagoInfo != null ? Colors.green[700] : Colors.grey,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const Divider(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Estado del Pago:'),
+                        _buildBadge(
+                          _pagoInfo != null && _pagoInfo!['pagado'] ? 'PAGADO' : 'PENDIENTE',
+                          _pagoInfo != null && _pagoInfo!['pagado'] ? Colors.green : Colors.orange,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Botón para el Taller (Fijar Precio)
+              if ((_userRole == 'admin_taller' || _userRole == 'personal_taller') && (_pagoInfo == null || !_pagoInfo!['pagado']))
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: _mostrarDialogoSetPrecio,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue[800],
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    icon: const Icon(Icons.edit),
+                    label: Text(_pagoInfo == null ? 'FIJAR PRECIO DEL SERVICIO' : 'ACTUALIZAR PRECIO'),
+                  ),
+                ),
+
+              // Botón para el Cliente (Pagar con Stripe)
+              if (_userRole == 'cliente' && estado == 'TERMINADO' && _pagoInfo != null && !_pagoInfo!['pagado'])
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: _iniciarPagoStripe,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF6772E5), // Stripe Blue
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    icon: const Icon(Icons.credit_card),
+                    label: const Text('PAGAR CON STRIPE', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  ),
+                ),
+              const SizedBox(height: 30),
+            ],
 
             // Photos Section
             if (fotos.isNotEmpty) ...[
