@@ -13,17 +13,24 @@ let envConfigFile = '';
 
 if (fs.existsSync(envPath)) {
   envConfigFile = fs.readFileSync(envPath, 'utf8');
+  console.log('✅ Archivo .env detectado');
 } else {
-  console.error('❌ ERROR: No se encontró el archivo Frontend/.env');
-  console.log('👉 Asegúrate de crear el archivo .env en la carpeta Frontend');
-  process.exit(1);
+  console.log('ℹ️ Usando variables de entorno del sistema (Vercel/CI)');
 }
 
-// Función para extraer variables sin importar si tienen espacios o comillas
+// Función para extraer variables priorizando process.env
 function getVar(name) {
-  const regex = new RegExp(`${name}\\s*=\\s*["']?(.*?)["']?(\\s|$)`, 'i');
-  const match = envConfigFile.match(regex);
-  return match ? match[1].trim() : '';
+  if (process.env[name]) {
+    return process.env[name];
+  }
+  
+  if (envConfigFile) {
+    const regex = new RegExp(`${name}\\s*=\\s*["']?(.*?)["']?(\\s|$)`, 'i');
+    const match = envConfigFile.match(regex);
+    return match ? match[1].trim() : '';
+  }
+  
+  return '';
 }
 
 const mapboxToken = getVar('MAPBOX_TOKEN');
