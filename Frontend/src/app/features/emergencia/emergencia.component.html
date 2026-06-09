@@ -20,94 +20,142 @@
     <p class="text-slate-500 font-medium max-w-md">Como administrador del sistema, tu función es supervisar la plataforma. La recepción y atención de emergencias es exclusiva de los talleres afiliados.</p>
   </div>
 
-  <div *ngIf="userRole() !== 'admin_sistema'" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-    <div
-      *ngFor="let emer of emergencias()"
-      class="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100 flex flex-col relative overflow-hidden group hover:shadow-md transition-shadow"
-    >
+  <div *ngIf="userRole() !== 'admin_sistema'">
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
       <div
-        class="absolute left-0 top-0 bottom-0 w-1.5"
-        [ngClass]="{
-          'bg-amber-500': emer.estado === 'espera',
-          'bg-blue-500': emer.estado === 'atendiendo',
-          'bg-green-500': emer.estado === 'terminado',
-          'bg-red-500': emer.estado === 'cancelado',
-        }"
-      ></div>
-
-      <div class="flex justify-between items-start mb-4 pl-2">
-        <div>
-          <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-            NRO: {{ emer.nro }}
-          </p>
-          <h3 class="text-lg font-black text-slate-800">
-            {{ emer.vehiculo?.marca ? emer.vehiculo.marca + ' ' + emer.vehiculo.modelo : emer.vehiculo }}
-          </h3>
-        </div>
-
-        <div class="flex flex-col items-end gap-2">
-           <span
-            class="flex items-center gap-1 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider border"
-            [class]="obtenerClasesEstado(emer.estado)"
-          >
-            {{ emer.estado }}
-          </span>
-          <button
-            (click)="abrirDetalle(emer)"
-            class="bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider border border-indigo-100 hover:bg-indigo-100 transition-colors flex items-center gap-1"
-          >
-            <span class="material-symbols-outlined text-sm">visibility</span>
-            Detalles
-          </button>
-        </div>
-      </div>
-
-      <div class="space-y-3 pl-2 flex-grow mb-6">
-        <div class="flex items-start gap-2">
-          <span class="material-symbols-outlined text-slate-400 text-sm mt-0.5">person</span>
-          <div>
-            <p class="text-xs font-bold text-slate-700">Cliente</p>
-            <p class="text-sm text-slate-500">{{ emer.cliente }}</p>
-          </div>
-        </div>
-
-        <div class="flex items-start gap-2">
-          <span class="material-symbols-outlined text-slate-400 text-sm mt-0.5">description</span>
-          <div>
-            <p class="text-xs font-bold text-slate-700">Problema</p>
-            <p class="text-sm text-slate-500">{{ emer.descripcion }}</p>
-          </div>
-        </div>
-
-        <div class="flex items-start gap-2">
-          <span class="material-symbols-outlined text-slate-400 text-sm mt-0.5">location_on</span>
-          <div>
-            <p class="text-xs font-bold text-slate-700">Ubicación</p>
-            <p class="text-sm text-primary font-medium cursor-pointer hover:underline">
-              {{ emer.ubicacion_real }}
-            </p>
-          </div>
-        </div>
-
+        *ngFor="let emer of emergencias()"
+        class="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100 flex flex-col relative overflow-hidden group hover:shadow-md transition-shadow"
+      >
         <div
-          *ngIf="emer.mecanico_asignado"
-          class="mt-4 p-3 bg-slate-50 rounded-2xl flex items-center gap-3 border border-slate-100"
-        >
-          <div
-            class="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center text-primary"
-          >
-            <span class="material-symbols-outlined text-sm">engineering</span>
-          </div>
+          class="absolute left-0 top-0 bottom-0 w-1.5"
+          [ngClass]="{
+            'bg-amber-500': emer.estado === 'espera',
+            'bg-blue-500': emer.estado === 'atendiendo',
+            'bg-green-500': emer.estado === 'terminado',
+            'bg-red-500': emer.estado === 'cancelado',
+          }"
+        ></div>
+
+        <div class="flex justify-between items-start mb-4 pl-2">
           <div>
-            <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider">
-              Mecánico a cargo
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+              NRO: {{ emer.nro }}
             </p>
-            <p class="text-sm font-bold text-slate-700">{{ emer.mecanico_asignado }}</p>
+            <h3 class="text-lg font-black text-slate-800">
+              {{ emer.vehiculo?.marca ? emer.vehiculo.marca + ' ' + emer.vehiculo.modelo : emer.vehiculo }}
+            </h3>
+          </div>
+
+          <div class="flex flex-col items-end gap-2">
+            <span
+              class="flex items-center gap-1 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider border"
+              [class]="obtenerClasesEstado(emer.estado)"
+            >
+              {{ emer.estado }}
+            </span>
+            <button
+              (click)="abrirDetalle(emer)"
+              class="bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider border border-indigo-100 hover:bg-indigo-100 transition-colors flex items-center gap-1"
+            >
+              <span class="material-symbols-outlined text-sm">visibility</span>
+              Detalles
+            </button>
+          </div>
+        </div>
+
+        <div class="space-y-3 pl-2 flex-grow mb-6">
+          <div class="flex items-start gap-2">
+            <span class="material-symbols-outlined text-slate-400 text-sm mt-0.5">person</span>
+            <div>
+              <p class="text-xs font-bold text-slate-700">Cliente</p>
+              <p class="text-sm text-slate-500">{{ emer.cliente }}</p>
+            </div>
+          </div>
+
+          <div class="flex items-start gap-2">
+            <span class="material-symbols-outlined text-slate-400 text-sm mt-0.5">description</span>
+            <div>
+              <p class="text-xs font-bold text-slate-700">Problema</p>
+              <p class="text-sm text-slate-500">{{ emer.descripcion }}</p>
+            </div>
+          </div>
+
+          <div class="flex items-start gap-2">
+            <span class="material-symbols-outlined text-slate-400 text-sm mt-0.5">location_on</span>
+            <div>
+              <p class="text-xs font-bold text-slate-700">Ubicación</p>
+              <p class="text-sm text-primary font-medium cursor-pointer hover:underline">
+                {{ emer.ubicacion_real }}
+              </p>
+            </div>
+          </div>
+
+          <div
+            *ngIf="emer.mecanico_asignado"
+            class="mt-4 p-3 bg-slate-50 rounded-2xl flex items-center gap-3 border border-slate-100"
+          >
+            <div
+              class="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center text-primary"
+            >
+              <span class="material-symbols-outlined text-sm">engineering</span>
+            </div>
+            <div>
+              <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                Mecánico a cargo
+              </p>
+              <p class="text-sm font-bold text-slate-700">{{ emer.mecanico_asignado }}</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="pt-4 border-t border-slate-100 pl-2">
+          <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">
+            Actualizar Estado
+          </label>
+          <div class="relative">
+            <select
+              [disabled]="estaBloqueado(emer.estado)"
+              [ngModel]="emer.estado"
+              (ngModelChange)="cambiarEstado(emer.nro, $event)"
+              class="w-full bg-slate-50 border-2 border-transparent rounded-xl p-3 pl-4 pr-10 text-sm font-bold text-slate-700 focus:bg-white focus:border-primary/30 outline-none appearance-none cursor-pointer transition-all shadow-sm"
+              [ngClass]="{ 'opacity-50 cursor-not-allowed': estaBloqueado(emer.estado) }"
+            >
+              <option [value]="emer.estado" disabled>Actual: {{ emer.estado | uppercase }}</option>
+
+              <ng-container *ngFor="let est of estadosDisponibles">
+                <option *ngIf="esOpcionValida(emer.estado, est.valor)" [value]="est.valor">
+                  {{ est.texto }}
+                </option>
+              </ng-container>
+            </select>
+            <span
+              class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+            >
+              expand_more
+            </span>
           </div>
         </div>
       </div>
-      <div *ngIf="emergenciaParaCobrar() !== null" class="fixed inset-0 z-[110] flex items-center justify-center p-4">
-  <div class="absolute inset-0 bg-secondary/80 backdrop-blur-md" (click)="cancelarCobro()"></div>
+    </div>
+
+    <div
+      *ngIf="emergencias().length === 0"
+      class="bg-slate-50/50 border-2 border-dashed border-slate-200 rounded-[2.5rem] p-12 flex flex-col items-center justify-center text-center mt-6"
+    >
+      <div class="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-sm mb-4">
+        <span class="material-symbols-outlined text-slate-300 text-4xl">coffee</span>
+      </div>
+      <h3 class="text-xl font-black text-slate-700">Sin emergencias activas</h3>
+      <p class="text-slate-400 font-medium mt-2 max-w-sm">
+        Actualmente no hay solicitudes de auxilio. Las nuevas emergencias aparecerán aquí.
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DE COBRO (FACTURACIÓN) - FUERA DEL BUCLE -->
+<div *ngIf="emergenciaParaCobrar() !== null" class="fixed inset-0 z-[110] flex items-start justify-center p-4 overflow-y-auto pt-10 sm:pt-20">
+  <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" (click)="cancelarCobro()"></div>
   <div class="bg-white rounded-[2rem] w-full max-w-md p-8 relative z-10 animate-in fade-in zoom-in duration-200 shadow-2xl">
     <div class="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
       <span class="material-symbols-outlined text-3xl">payments</span>
@@ -132,59 +180,13 @@
   </div>
 </div>
 
-      <div class="pt-4 border-t border-slate-100 pl-2">
-        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">
-          Actualizar Estado
-        </label>
-        <div class="relative">
-          <select
-            [disabled]="estaBloqueado(emer.estado)"
-            [ngModel]="emer.estado"
-            (ngModelChange)="cambiarEstado(emer.nro, $event)"
-            class="w-full bg-slate-50 border-2 border-transparent rounded-xl p-3 pl-4 pr-10 text-sm font-bold text-slate-700 focus:bg-white focus:border-primary/30 outline-none appearance-none cursor-pointer transition-all shadow-sm"
-            [ngClass]="{ 'opacity-50 cursor-not-allowed': estaBloqueado(emer.estado) }"
-          >
-            <option [value]="emer.estado" disabled>Actual: {{ emer.estado | uppercase }}</option>
-
-            <ng-container *ngFor="let est of estadosDisponibles">
-              <option *ngIf="esOpcionValida(emer.estado, est.valor)" [value]="est.valor">
-                {{ est.texto }}
-              </option>
-            </ng-container>
-          </select>
-          <span
-            class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
-          >
-            expand_more
-          </span>
-        </div>
-      </div>
-    </div>
-
-    <div
-      *ngIf="emergencias().length === 0"
-      class="col-span-full bg-slate-50/50 border-2 border-dashed border-slate-200 rounded-[2.5rem] p-12 flex flex-col items-center justify-center text-center"
-    >
-      <div class="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-sm mb-4">
-        <span class="material-symbols-outlined text-slate-300 text-4xl">coffee</span>
-      </div>
-      <h3 class="text-xl font-black text-slate-700">Sin emergencias activas</h3>
-      <p class="text-slate-400 font-medium mt-2 max-w-sm">
-        Actualmente no hay solicitudes de auxilio. Las nuevas emergencias aparecerán aquí.
-      </p>
-    </div>
-  </div>
-</div>
-
-<!-- ========================================== -->
-<!-- MODAL DETALLE EMERGENCIA (MISMA LÓGICA QUE DASHBOARD) -->
-<!-- ========================================== -->
+<!-- MODAL DETALLE EMERGENCIA -->
 <div
   *ngIf="mostrarModalDetalle()"
-  class="fixed inset-0 z-[100] flex items-center justify-center p-4"
+  class="fixed inset-0 z-[100] flex items-start justify-center p-4 overflow-y-auto pt-10 sm:pt-20"
 >
   <div
-    class="absolute inset-0 bg-secondary/80 backdrop-blur-md transition-opacity"
+    class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity"
     (click)="cerrarDetalle()"
   ></div>
 

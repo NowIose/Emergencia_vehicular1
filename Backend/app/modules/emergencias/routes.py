@@ -429,6 +429,43 @@ def obtener_mis_emergencias_cliente(db: Session = Depends(get_db), current_user:
     return emergencias
 
 
+@router.post("/{nro}/cancelar", response_model=schemas.EmergenciaResponse)
+async def cancelar_emergencia_cliente(nro: int, fastapi_request: Request, db: Session = Depends(get_db), current_user: Usuario = Depends(get_current_user)):
+    # 1. Buscar la emergencia
+    emergencia = db.query(models.Emergencia).filter(models.Emergencia.nro == nro).first()
+    if not emergencia:
+        raise HTTPException(status_code=404, detail="Emergencia no encontrada")
+    
+    # 2. Verificar que el usuario sea el dueño del vehículo
+    vehiculo = db.query(Vehiculo).filter(Vehiculo.id == emergencia.id_vehiculo, Vehiculo.cliente_id == current_user.id).first()
+    if not vehiculo:
+        raise HTTPException(status_code=403, detail="No tienes permiso para cancelar esta emergencia")
+    
+    # 3. Verificar que esté en espera
+    if emergencia.estado != models.EstadoEmergencia.espera:
+        raise HTTPException(status_code=400, detail="Solo se pueden cancelar emergencias en espera")
+    
+    # 4. Cambiar estado a cancelado
+    estado_anterior = emergencia.estado.value if hasattr(emergencia.estado, 'value') else emergencia.estado
+    emergencia.estado = models.EstadoEmergencia.cancelado
+    db.commit()
+    db.refresh(emergencia)
+    
+    # 5. Registrar evento
+    registrar_evento(db, fastapi_request, "Cancelación Cliente", f"El cliente canceló la emergencia Nro {nro}", usuario=current_user)
+    
+    # 6. Notificar vía WebSocket a los talleres
+    await manager.broadcast_to_talleres({
+        "type": "EMERGENCY_CANCELLED",
+        "data": {
+            "nro": nro,
+            "estado": "cancelado"
+        }
+    })
+    
+    return emergencia
+
+
 @router.post("/{nro}/mensajes", response_model=schemas.MensajeResponse)
 async def enviar_mensaje(nro: int, req: schemas.MensajeCreate, db: Session = Depends(get_db), current_user: Usuario = Depends(get_current_user)):
     emergencia = db.query(models.Emergencia).filter(models.Emergencia.nro == nro).first()

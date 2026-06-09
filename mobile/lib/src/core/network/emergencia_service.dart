@@ -185,4 +185,20 @@ class EmergenciaService {
       throw Exception(error['detail'] ?? 'Error al iniciar pago');
     }
   }
+
+  Future<void> cancelarEmergencia(int nro) async {
+    final token = await _storage.read(key: 'jwt_token');
+    final response = await http.post(
+      Uri.parse("$_baseUrl/emergencias/$nro/cancelar"),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode != 200) {
+      final error = jsonDecode(response.body);
+      throw Exception(error['detail'] ?? 'Error al cancelar emergencia');
+    }
+  }
 }

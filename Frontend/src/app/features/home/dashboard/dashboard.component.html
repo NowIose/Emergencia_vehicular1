@@ -268,9 +268,9 @@
 </div>
 
 <!-- Modal Registrar Personal (RESTAURADO EXACTAMENTE) -->
-<div *ngIf="mostrarModal()" class="fixed inset-0 z-[100] flex items-center justify-center p-4">
+<div *ngIf="mostrarModal()" class="fixed inset-0 z-[100] flex items-start justify-center p-4 overflow-y-auto pt-10 sm:pt-20">
   <div
-    class="absolute inset-0 bg-secondary/60 backdrop-blur-sm transition-opacity"
+    class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity"
     (click)="cerrarModal()"
   ></div>
 
@@ -411,10 +411,10 @@
 <!-- ========================================== -->
 <div
   *ngIf="mostrarModalDetalle()"
-  class="fixed inset-0 z-[100] flex items-center justify-center p-4"
+  class="fixed inset-0 z-[100] flex items-start justify-center p-4 overflow-y-auto pt-10 sm:pt-20"
 >
   <div
-    class="absolute inset-0 bg-secondary/80 backdrop-blur-md transition-opacity"
+    class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity"
     (click)="cerrarDetalleEmergencia()"
   ></div>
 
@@ -578,8 +578,8 @@
 </div>
 
 <!-- Modal Detalle Taller (Para Admin) -->
-<div *ngIf="mostrarModalTaller()" class="fixed inset-0 z-[100] flex items-center justify-center p-4">
-  <div class="absolute inset-0 bg-secondary/80 backdrop-blur-md transition-opacity" (click)="cerrarModalTaller()"></div>
+<div *ngIf="mostrarModalTaller()" class="fixed inset-0 z-[100] flex items-start justify-center p-4 overflow-y-auto pt-10 sm:pt-20">
+  <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" (click)="cerrarModalTaller()"></div>
   <div class="bg-white rounded-[2.5rem] w-full max-w-4xl overflow-hidden shadow-2xl relative z-10 animate-in fade-in zoom-in duration-300 flex flex-col md:flex-row max-h-[90vh]">
     
     <!-- Lado Izquierdo: Mapa e Imagen -->
@@ -677,10 +677,10 @@
 <!-- ========================================== -->
 <div
   *ngIf="mostrarModalEspecialidades()"
-  class="fixed inset-0 z-[100] flex items-center justify-center p-4"
+  class="fixed inset-0 z-[100] flex items-start justify-center p-4 overflow-y-auto pt-10 sm:pt-20"
 >
   <div
-    class="absolute inset-0 bg-secondary/60 backdrop-blur-sm transition-opacity"
+    class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity"
     (click)="mostrarModalEspecialidades.set(false)"
   ></div>
 

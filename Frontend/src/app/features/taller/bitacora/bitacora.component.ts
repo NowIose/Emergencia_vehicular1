@@ -128,7 +128,7 @@ import { BitacoraService, BitacoraEntry } from '../../../core/services/bitacora.
 
       <!-- Modal de Detalles -->
       @if (selectedEntry) {
-        <div class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+        <div class="fixed inset-0 z-[100] flex items-start justify-center p-4 overflow-y-auto pt-10 sm:pt-20 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
           <div class="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
             <div class="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
               <div>

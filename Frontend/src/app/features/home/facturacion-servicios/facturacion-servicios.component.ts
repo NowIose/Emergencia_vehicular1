@@ -62,11 +62,25 @@ import { PagosService } from '../../../core/services/pagos.service';
 export class FacturacionServiciosComponent implements OnInit {
   private pagosService = inject(PagosService);
   historial = signal<any[]>([]);
+  loading = signal<boolean>(true);
 
   ngOnInit() {
+    this.cargarHistorial();
+  }
+
+  cargarHistorial() {
+    this.loading.set(true);
     this.pagosService.obtenerHistorialServicios().subscribe({
-      next: (data) => this.historial.set(data),
-      error: (err) => console.error('Error cargando historial', err)
+      next: (data) => {
+        console.log('DEBUG FRONTEND: Recibidos', data.length, 'registros de facturación.');
+        console.table(data); // Ver los datos en formato tabla en la consola
+        this.historial.set(data);
+        this.loading.set(false);
+      },
+      error: (err) => {
+        console.error('Error cargando historial', err);
+        this.loading.set(false);
+      }
     });
   }
 }

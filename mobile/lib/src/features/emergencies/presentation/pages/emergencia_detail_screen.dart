@@ -103,6 +103,43 @@ class _EmergenciaDetailScreenState extends State<EmergenciaDetailScreen> {
     }
   }
 
+  Future<void> _cancelarEmergencia() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirmar Cancelación', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: const Text('¿Estás seguro de que deseas cancelar esta solicitud de auxilio? Esta acción no se puede deshacer.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('No, volver', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red[700]),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Sí, cancelar ayuda', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await _emergenciaService.cancelarEmergencia(widget.emergencia['nro']);
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Solicitud cancelada correctamente')),
+        );
+        Navigator.pop(context, true); // Retornar con valor true para refrescar lista
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    }
+  }
+
   void _mostrarDialogoCalificacion() {
     int puntuacion = 5;
     TextEditingController comentarioController = TextEditingController();
@@ -441,6 +478,26 @@ class _EmergenciaDetailScreenState extends State<EmergenciaDetailScreen> {
                     ),
                     icon: const Icon(Icons.credit_card),
                     label: const Text('PAGAR CON STRIPE', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  ),
+                ),
+
+              // Botón para el Cliente (Cancelar Emergencia - Solo si está en ESPERA)
+              if (_userRole == 'cliente' && estado == 'ESPERA')
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: _cancelarEmergencia,
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: Colors.red[300]!),
+                        foregroundColor: Colors.red[700],
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      icon: const Icon(Icons.cancel),
+                      label: const Text('CANCELAR SOLICITUD', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
                   ),
                 ),
               const SizedBox(height: 30),

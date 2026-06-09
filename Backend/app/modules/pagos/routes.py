@@ -286,18 +286,26 @@ def get_pago_emergencia(nro: int, db: Session = Depends(get_db)):
     if not pago:
          raise HTTPException(status_code=404, detail="No hay información de pago")
     return pago
-
 @router.get("/emergencia/taller/historial", response_model=list[dict])
 def historial_pagos_taller(db: Session = Depends(get_db), current_user: Usuario = Depends(get_current_user)):
     if current_user.rol.value not in ["admin_taller", "personal_taller"]:
         raise HTTPException(status_code=403, detail="Acceso denegado")
 
+    # Por defecto, si es admin_taller, el id_taller en las emergencias es su propio current_user.id
     taller_id = current_user.id
+
+    # Si es personal, lo extraemos de su tabla correspondiente como ya hacías antes
     if current_user.rol.value == "personal_taller":
         personal = db.query(PersonalTaller).filter(PersonalTaller.id == current_user.id).first()
         taller_id = personal.taller_id if personal else None
 
-    # Obtenemos los pagos unidos a las emergencias de este taller
+    if not taller_id:
+        print(f"⚠️ [DEBUG] No se pudo determinar el taller_id para el usuario {current_user.id}")
+        return []
+
+    print(f"🔍 [DEBUG HISTORIAL] Buscando transacciones para el id_taller: {taller_id}")
+
+    # Consultamos todos los pagos vinculados a las emergencias de este taller
     pagos = db.query(PagoEmergencia).join(Emergencia).filter(Emergencia.id_taller == taller_id).order_by(PagoEmergencia.id.desc()).all()
 
     resultado = []
@@ -312,4 +320,6 @@ def historial_pagos_taller(db: Session = Depends(get_db), current_user: Usuario 
             "vehiculo": f"{p.emergencia.vehiculo.marca} {p.emergencia.vehiculo.modelo}" if p.emergencia.vehiculo else "Vehículo Desconocido",
             "diagnostico_ia": p.emergencia.diagnostico_ia
         })
+        
+    print(f"✅ [DEBUG HISTORIAL] Se encontraron {len(resultado)} registros para mostrar.")
     return resultado
